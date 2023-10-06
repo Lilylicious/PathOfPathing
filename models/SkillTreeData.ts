@@ -115,7 +115,7 @@ export class SkillTreeData implements ISkillTreeData {
                         // Scion
                         baseX = this.min_x * .65;
                         baseY = this.max_y * .95;
-                        if (this.patch.compare(versions.v3_16_0) >= 0) {
+                        if (this.patch.compare(versions.v3_22_0) >= 0) {
                             baseX = this.min_x * .85;
                             baseY = this.max_y * .85;
                         }
@@ -127,7 +127,7 @@ export class SkillTreeData implements ISkillTreeData {
                         // Templar, Marauder, Ranger, Shadow 
                         baseX = startGroup.x < 0 ? this.min_x * .80 : this.max_x;
                         baseY = startGroup.y + (Math.sign(startGroup.y) * (offset + 1) * offsetDistance);
-                        if (this.patch.compare(versions.v3_16_0) >= 0) {
+                        if (this.patch.compare(versions.v3_22_0) >= 0) {
                             baseX = startGroup.x < 0 ? this.min_x * 1.05 : this.max_x;
                         }
                     }

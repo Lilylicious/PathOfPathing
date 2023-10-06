@@ -1,7 +1,7 @@
 {
-  "name": "SkillTree_TypeScript",
-  "repository": "https://github.com/EmmittJ/SkillTree_TypeScript",
-  "version": "1.0.0",
+  "name": "pathofpathing",
+  "repository": "https://github.com/Lilylicious/PathofPathing",
+  "version": "1.0.1",
   "description": "",
   "main": "./app/app.js",
   "scripts": {
@@ -11,7 +11,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@types/downloadjs": "^1.4.3",
     "@types/klaw": "^3.0.4",

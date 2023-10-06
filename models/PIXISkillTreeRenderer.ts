@@ -53,7 +53,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             resizeTo: window,
             resolution: devicePixelRatio,
             sharedTicker: true,
-            backgroundColor: skillTreeData.patch.compare(versions.v3_16_0) >= 0 ? 0x070b10 : 0x1a1411
+            backgroundColor: skillTreeData.patch.compare(versions.v3_22_0) >= 0 ? 0x070b10 : 0x1a1411
         });
         PIXI.Ticker.shared.stop();
         PIXI.Ticker.system.stop();
