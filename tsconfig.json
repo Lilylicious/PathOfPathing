@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    // add Bun type definitions
+    "types": [
+      "bun-types"
+    ],
+    // enable latest features
+    "lib": [
+      "esnext"
+    ],
+    "module": "esnext",
+    "target": "esnext",
+    // typescript
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "moduleDetection": "force",
+    "allowJs": false,
+    "esModuleInterop": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "./"
+  },
+  "include": [
+    "node_modules/@types/**.*.d.ts",
+    "models/**/*.ts",
+    "models/**/*.d.ts",
+    "app/**/*.ts"
+  ]
+}

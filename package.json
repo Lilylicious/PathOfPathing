@@ -1,0 +1,32 @@
+{
+  "name": "SkillTree_TypeScript",
+  "repository": "https://github.com/EmmittJ/SkillTree_TypeScript",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./app/app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "time bun run ./build.ts",
+    "dev": "bun run ./build.ts && bun http-server dist/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/downloadjs": "^1.4.3",
+    "@types/klaw": "^3.0.4",
+    "@types/semver": "^7.5.0",
+    "bun": "^1.0.1",
+    "bun-types": "^1.0.3",
+    "klaw": "^4.1.0",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "downloadjs": "^1.4.7",
+    "http-server": "^14.1.1",
+    "pixi-cull": "^2.2.0",
+    "pixi-viewport": "^5.0.2",
+    "pixi.js": "^7.2.4",
+    "semver": "^7.5.4"
+  }
+}
