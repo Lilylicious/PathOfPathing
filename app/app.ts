@@ -132,12 +132,12 @@ export class App {
                     this.skillTreeUtilities.decodeURL();
                     this.renderer.RenderCharacterStartsActive();
 
-                    const screenshot = document.getElementById("skillTreeControl_Screenshot") as HTMLSelectElement;
-                    screenshot.style.removeProperty('display');
-                    screenshot.addEventListener("click", () => {
-                        const mimeType: 'image/jpeg' = 'image/jpeg';
-                        download(this.renderer.CreateScreenshot(mimeType), `${version.replace(/\./g, '')}_skilltree.jpg`, mimeType);
-                    });
+                    // const screenshot = document.getElementById("skillTreeControl_Screenshot") as HTMLSelectElement;
+                    // screenshot.style.removeProperty('display');
+                    // screenshot.addEventListener("click", () => {
+                    //     const mimeType: 'image/jpeg' = 'image/jpeg';
+                    //     download(this.renderer.CreateScreenshot(mimeType), `${version.replace(/\./g, '')}_skilltree.jpg`, mimeType);
+                    // });
                 })
                 .catch((reason) => console.error(reason));
         }

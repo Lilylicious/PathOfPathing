@@ -4,6 +4,7 @@ import { SkillTreeEvents } from "./SkillTreeEvents";
 import * as PIXI from "pixi.js";
 import { SkillTreeCodec } from "./SkillTreeCodec";
 import { sleep } from "bun";
+import { beforeAll } from "bun:test";
 
 export class SkillTreeUtilities {
     private dragStart: PIXI.Point;
@@ -226,20 +227,15 @@ export class SkillTreeUtilities {
         .filter(node => node.classStartIndex !== undefined)[0].out
         .filter(nodeId => this.skillTreeData.nodes[nodeId].isAscendancyStart === false)
         .map(nodeId => this.skillTreeData.nodes[nodeId]);
-        let desiredNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired)).sort((a,b) => {
+        const desiredNodesUnsorted = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired))
+        let desiredNodes = desiredNodesUnsorted.sort((b,a) => 
+        {
             let distanceA = 100
             let distanceB = 100
 
             for(const node of startNodes){
-                const startId = node.GetId();
-                const aId = a.GetId();
-                const bId = b.GetId();
-                const smallerIdA = aId < startId ? aId : startId;
-                const biggerIdA = aId < startId ? startId : aId;
-                const smallerIdB = bId < startId ? bId : startId;
-                const biggerIdB = bId < startId ? startId : bId;
-                const distA = this.skillTreeData.nodes[smallerIdA].distance[biggerIdA]
-                const distB = this.skillTreeData.nodes[smallerIdB].distance[biggerIdB]
+                const distA = this.skillTreeData.nodes[a.GetId()].distance[node.GetId()]
+                const distB = this.skillTreeData.nodes[b.GetId()].distance[node.GetId()]
 
                 if(distA === undefined || distB === undefined)
                     return -1
@@ -247,7 +243,6 @@ export class SkillTreeUtilities {
                 distanceA = distA < distanceA ? distA : distanceA;
                 distanceB = distB < distanceB ? distB : distanceB;
             }
-                 
             if(distanceA < distanceB)    
                 return -1
             if(distanceA > distanceB)
@@ -255,36 +250,42 @@ export class SkillTreeUtilities {
 
             return 0
         });
-
-        const firstNode = desiredNodes[0];
+        const debug = true
+        const firstNode = desiredNodes.shift();
         if(firstNode !== undefined){
-            //this.skillTreeData.addState(firstNode, SkillNodeStates.Active);
-            if(desiredNodes.length === 1 && !startNodes.includes(desiredNodes[0])){
-                const desiredNodeId = desiredNodes[0].GetId()
+            this.skillTreeData.addState(firstNode, SkillNodeStates.Active);
+            if(debug) console.log('Added', firstNode.id, '(' + firstNode.name + ')')
+            if(desiredNodes.length === 0 && !startNodes.includes(firstNode)){
+                const desiredNodeId = firstNode.GetId()
                 let startNode;
                 let startNodeDistance = 1000;
                 for (const node of startNodes){
-                    const nodeId = node.GetId()
-
-                    const smallerId = desiredNodeId < nodeId ? desiredNodeId : nodeId;
-                    const biggerId = desiredNodeId < nodeId ? nodeId : desiredNodeId;
-                    const dist = this.skillTreeData.nodes[smallerId].distance[biggerId]
+                    const dist = this.skillTreeData.nodes[desiredNodeId].distance[node.GetId()]
 
                     if(dist < startNodeDistance){
                         startNode = node;
                         startNodeDistance = dist;
                     }
                 }
-
                 
-                if(startNode === undefined){
-                    startNode = this.getShortestPath(firstNode, false)[0]
-                }
+                if(startNode !== undefined){
+                    const path = this.getShortestPath(startNode, false)
 
-                if (!startNode.is(SkillNodeStates.Active)) {
-                    this.skillTreeData.addState(startNode, SkillNodeStates.Active);
+                    if (!startNode.is(SkillNodeStates.Active)) {
+                        if(debug) console.log('Added', startNode.id, '(' + startNode.name + ')')
+                        this.skillTreeData.addState(startNode, SkillNodeStates.Active);
+                    }
+
+                    for (const i of path) {
+                        if (!i.is(SkillNodeStates.Active)) {
+                            if(debug) console.log('Added', i.id, '(' + i.name + ')')
+                            this.skillTreeData.addState(i, SkillNodeStates.Active);
+                        }
+                    }
                 }
             }
+
+
             let count = 0
             while (desiredNodes.length > 0){
                 if(++count > 50){
@@ -307,17 +308,56 @@ export class SkillTreeUtilities {
                 const shortestPathNode = this.skillTreeData.nodes[shortestPath.id]
                 if (shortestPath.path.length > 0 || shortestPathNode.is(SkillNodeStates.Active)) {
                     if (!shortestPathNode.is(SkillNodeStates.Active)) {
+                        if(debug) console.log('Added', shortestPathNode.id, '(' + shortestPathNode.name + ')')
                         this.skillTreeData.addState(shortestPathNode, SkillNodeStates.Active);
                     }
                     
                     for (const i of shortestPath.path) {
                         if (!i.is(SkillNodeStates.Active)) {
+                            if(debug) console.log('Added', i.id, '(' + i.name + ')')
                             this.skillTreeData.addState(i, SkillNodeStates.Active);
                         }
                     }
 
                     
                     desiredNodes = desiredNodes.filter(node => !node.is(SkillNodeStates.Active))
+                }
+
+                if(desiredNodes.length === 0){
+                    let closestNode
+                    let closestNodeDist = 10000
+                    let alreadyHaveRoot = false
+                    for(const node of Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))){
+                        for (const startNode of startNodes){
+                            if(node.GetId() === startNode.GetId()) {
+                                alreadyHaveRoot = true;
+                                break;
+                            }
+                            const dist = this.skillTreeData.nodes[node.GetId()].distance[startNode.GetId()]
+        
+                            if(dist < closestNodeDist){
+                                closestNode = startNode;
+                                closestNodeDist = dist;
+                            }
+                        }
+                        if (alreadyHaveRoot) break;
+                    }
+                    
+                    if(closestNode !== undefined && !alreadyHaveRoot){
+                        const path = this.getShortestPath(closestNode, false)
+    
+                        if (!closestNode.is(SkillNodeStates.Active)) {
+                            if(debug) console.log('Added', closestNode.id, '(' + closestNode.name + ')')
+                            this.skillTreeData.addState(closestNode, SkillNodeStates.Active);
+                        }
+    
+                        for (const i of path) {
+                            if (!i.is(SkillNodeStates.Active)) {
+                                if(debug) console.log('Added', i.id, '(' + i.name + ')')
+                                this.skillTreeData.addState(i, SkillNodeStates.Active);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -468,7 +508,7 @@ export class SkillTreeUtilities {
                 frontier.push(out);
                 if(wantDebug) console.log('New frontier', frontier.map(node => node.GetId()))
                 if(wantDebug) console.log('Is out active?', out.is(SkillNodeStates.Active))
-                if (out.is(SkillNodeStates.Active) || startNodes.map(node => node.id).includes(out.id)) {
+                if (out.is(SkillNodeStates.Active) /*|| startNodes.map(node => node.id).includes(out.id)*/) {
                     frontier.length = 0;
                     foundNode = out;
                     break;
