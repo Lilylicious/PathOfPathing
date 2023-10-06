@@ -1,4 +1,4 @@
-﻿import { SkillTreeData } from "./SkillTreeData";
+import { SkillTreeData } from "./SkillTreeData";
 import { SkillNode, SkillNodeStates } from "./SkillNode";
 import { SkillTreeEvents } from "./SkillTreeEvents";
 import * as PIXI from "pixi.js";
@@ -211,18 +211,61 @@ export class SkillTreeUtilities {
         for (const node of previousActiveNodes){
             this.skillTreeData.removeState(node, SkillNodeStates.Active);
         }
+
         
-        if (node.is(SkillNodeStates.Desired)) {
-            this.skillTreeData.removeState(node, SkillNodeStates.Desired);
-            this.skillTreeData.addState(node, SkillNodeStates.UnDesired);
+        if (this.skillTreeData.tree === "Atlas" && node.isMastery) {
+            let groups: Array<number> = []
+            for (const id in this.skillTreeData.nodes) {
+                const other = this.skillTreeData.nodes[id];
+                if (!other.isMastery) {
+                    continue;
+                }
+
+                if (other.name !== node.name) {
+                    continue;
+                }
+
+                if (other.group === undefined) {
+                    continue;
+                }
+
+                if(!groups.includes(other.group)){
+                    groups.push(other.group)
+                }
+            }
+            for(const groupId of groups){
+                for(const nodeId of this.skillTreeData.groups[groupId].nodes){
+                    const node = this.skillTreeData.nodes[nodeId]
+                    if(node.isNotable){                        
+                        if (node.is(SkillNodeStates.Desired)) {
+                            this.skillTreeData.removeState(node, SkillNodeStates.Desired);
+                            this.skillTreeData.addState(node, SkillNodeStates.UnDesired);
+                        }
+                        else if (node.is(SkillNodeStates.UnDesired)){
+                            this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
+                        }
+                        else if (!node.isMastery) {
+                            this.skillTreeData.addState(node, SkillNodeStates.Desired);
+                        }
+                        SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
+                    }
+                }
+            }
         }
-        else if (node.is(SkillNodeStates.UnDesired)){
-            this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
+        else{
+            if (node.is(SkillNodeStates.Desired)) {
+                this.skillTreeData.removeState(node, SkillNodeStates.Desired);
+                this.skillTreeData.addState(node, SkillNodeStates.UnDesired);
+            }
+            else if (node.is(SkillNodeStates.UnDesired)){
+                this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
+            }
+            else if (!node.isMastery) {
+                this.skillTreeData.addState(node, SkillNodeStates.Desired);
+            }
+            SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
         }
-        else if (!node.isMastery) {
-            this.skillTreeData.addState(node, SkillNodeStates.Desired);
-        }
-        SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
+        
         const startNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
         .filter(node => node.classStartIndex !== undefined)[0].out
         .filter(nodeId => this.skillTreeData.nodes[nodeId].isAscendancyStart === false)

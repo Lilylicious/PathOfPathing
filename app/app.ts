@@ -29,13 +29,14 @@ export class App {
             var file = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree.json`).then(response => response.json());
             var json = file as ISkillTreeBase;
 
-            // const sourceNodes = file.nodes
+            const sourceNodes = Object.values(file.nodes).map(node => node.skill);
+            let destinationNodes = []
 
-            let sourceNodes = Object.values(file.nodes).filter(
-                node => node.ascendancyName === undefined && node.group !== 0 
-                && (node.isNotable === true || node.isKeystone === true) 
-                && ((node.out !== undefined && node.out.length > 0) 
-                || (node.in !== undefined && node.in.length > 0))).map(node => Number(node.skill));
+            // let sourceNodes = Object.values(file.nodes).filter(
+            //     node => node.ascendancyName === undefined && node.group !== 0 
+            //     && (node.isNotable === true || node.isKeystone === true) 
+            //     && ((node.out !== undefined && node.out.length > 0) 
+            //     || (node.in !== undefined && node.in.length > 0))).map(node => Number(node.skill));
 
             for (const nodeId of file.nodes.root.out){
                 let actualNodes = []
@@ -44,12 +45,12 @@ export class App {
                 for (const secondNodeId of actualNodes) {
                     let startNode = file.nodes[secondNodeId]
                     if (startNode.isAscendancyStart === undefined){
-                        sourceNodes.push(Number(secondNodeId))
+                        destinationNodes.push(Number(secondNodeId))
                     }
                         
                 }
             }
-            const destinationNodes = sourceNodes;
+            //const destinationNodes = sourceNodes;
             
             //this.PreGenerateShortestDistances(file, sourceNodes, destinationNodes)
             const data = new SkillTreeData(SkillTreePreprocessors.Decode(json, options), semver);
@@ -109,6 +110,14 @@ export class App {
             SkillTreeEvents.fire("controls", "ascendancy-class-change", asc);
         });
 
+        const exportElement = document.getElementById("skillTreeControl_Export") as HTMLButtonElement;
+        exportElement.addEventListener("click", () => {
+            const passiveCode = window.location.hash.substring(1)
+            const prefix = 'https://www.pathofexile.com/fullscreen-' + (this.skillTreeData.tree === 'Atlas' ? 'atlas' : 'passive') + '-skill-tree/'
+            const url = prefix + passiveCode
+            navigator.clipboard.writeText(url);
+        });
+
         const showhide = document.getElementById("skillTreeStats_ShowHide") as HTMLButtonElement;
         showhide.addEventListener("click", () => {
             const content = document.getElementById("skillTreeStats_Content") as HTMLDivElement;
@@ -144,21 +153,44 @@ export class App {
     }
 
     private PreGenerateShortestDistances = (file, sourceNodes, destinationNodes) => {
+        let verbose = false
+        if(file.tree === 'Default')
+        return;
         const nodes = file.nodes
+        console.log('Shortest distances started')
         for (const nodeId in nodes){
             file.nodes[nodeId].distance = {}
         }
+        console.log('Reset done')
 
         let count = 0
-        for (const sourceId of sourceNodes){
-            //const sourceId = 6
-            if (nodes[sourceId].ascendancyName !== undefined){
-                continue;
-            }                    
+        console.log('Checking ' + sourceNodes.length + '')
+        console.log(destinationNodes)
+        for (const sourceId of sourceNodes){   
             if (sourceId === "root"){
+                console.log('Skipping root')
                 continue;
             }
-            if(nodes[sourceId].out === undefined && nodes[sourceId].in === undefined){
+
+            if(sourceId === undefined || nodes[sourceId] === undefined){
+                console.log('Skipping undefined node')
+                continue;
+            }
+            
+            // if(file.tree === 'Atlas' && nodes[sourceId].isMastery !== 'undefined'){
+            //     console.log('Skipping mastery')
+            //     continue;
+            // }
+            //const sourceId = 6
+            if (file.tree !== 'Atlas' && nodes[sourceId].ascendancyName !== undefined){
+                continue;
+            }      
+
+            //console.log('Skipping mastery')
+
+            if((nodes[sourceId].out === undefined && nodes[sourceId].in === undefined)
+            || (nodes[sourceId].out && nodes[sourceId].out.length === 0 && nodes[sourceId].in && nodes[sourceId].in.length === 0)){
+                console.log('Skipping no out or in')
                 continue;
             }
 
@@ -174,11 +206,17 @@ export class App {
                 if (current === undefined) {
                     continue;
                 }
+                if(sourceId === 65499 && current.skill === 5515){
+                    console.log('verbose enabled')
+                    verbose = true
+                }
+                
+                //console.log('Checking', sourceId + ': ' + current.skill)
                 explored[current.skill] = current;
                 const dist = distance[current.skill];
                 let actualNodes = []
-                actualNodes.push(...current.out)
-                actualNodes.push(...current.in)
+                if(current.out)actualNodes.push(...current.out)
+                if(current.in)actualNodes.push(...current.in)
                 for (const id of actualNodes) {
                     const out = nodes[id];
                     if (out.ascendancyName !== "" && out.ascendancyName !== undefined) {
@@ -189,13 +227,7 @@ export class App {
                     }
 
                     if(destinationNodes.includes(Number(id))){
-                        let lowestId = sourceId
-                        let highestId = id
-                        if(id < sourceId){
-                            lowestId = id
-                            highestId = sourceId
-                        }
-                        file.nodes[lowestId].distance[highestId] = dist + 1;
+                        file.nodes[sourceId].distance[id] = dist + 1;
                     }
     
                     count++
@@ -204,7 +236,6 @@ export class App {
                 }
             }
         }
-        console.log('Distances from 6 to 31628 are ', file.nodes[6].distance[31628])
         console.log('Total frontier checks: ' + count);
 
         var a = document.createElement("a");
