@@ -108,6 +108,7 @@ export class App {
 
             SkillTreeEvents.fire("controls", "class-change", start);
             SkillTreeEvents.fire("controls", "ascendancy-class-change", asc);
+            SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
         });
 
         const exportElement = document.getElementById("skillTreeControl_Export") as HTMLButtonElement;
