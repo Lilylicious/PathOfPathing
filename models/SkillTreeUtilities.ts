@@ -420,7 +420,7 @@ export class SkillTreeUtilities {
             if (node.isAscendancyStart && !node.is(SkillNodeStates.Active)) {
                 continue;
             }
-            if (node.is(SkillNodeStates.UnDesired)){
+            if (node.is(SkillNodeStates.UnDesired) || node.classStartIndex !== undefined){
                 continue;
             }
             frontier.push(adjacent[id]);
@@ -458,7 +458,7 @@ export class SkillTreeUtilities {
                     continue;
                 }
                 
-                if (out.is(SkillNodeStates.UnDesired)) {
+                if (out.is(SkillNodeStates.UnDesired) || out.classStartIndex !== undefined) {
                     continue;
                 }
                 

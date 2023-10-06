@@ -34,7 +34,7 @@ module.exports = {
         new webpack.ProgressPlugin(),
         new HtmlWebpackPlugin({
             hash: true,
-            title: 'PoE Skill Tree',
+            title: 'Path of Pathing',
             template: './templates/index.html',
             filename: 'index.html'
         }),
