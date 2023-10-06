@@ -250,7 +250,7 @@ export class SkillTreeUtilities {
 
             return 0
         });
-        const debug = true
+        const debug = false
         const firstNode = desiredNodes.shift();
         if(firstNode !== undefined){
             this.skillTreeData.addState(firstNode, SkillNodeStates.Active);
@@ -324,18 +324,20 @@ export class SkillTreeUtilities {
                 }
 
                 if(desiredNodes.length === 0){
+                    if(debug) console.log('Finding root!')
                     let closestNode
                     let closestNodeDist = 10000
                     let alreadyHaveRoot = false
-                    for(const node of Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))){
+                    for(const node of Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined)){
                         for (const startNode of startNodes){
                             if(node.GetId() === startNode.GetId()) {
                                 alreadyHaveRoot = true;
                                 break;
                             }
                             const dist = this.skillTreeData.nodes[node.GetId()].distance[startNode.GetId()]
-        
+                            if(debug) console.log('For node ' + node.name + ' the distance to ' + startNode.name + ' is ' + dist)
                             if(dist < closestNodeDist){
+                                
                                 closestNode = startNode;
                                 closestNodeDist = dist;
                             }
