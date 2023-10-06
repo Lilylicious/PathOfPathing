@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PoE Skill Tree</title>
+    
+	<script src="index-555236fc43259b6a.js"></script>
+	<link rel="stylesheet" href="app-357f9a5a4238ef33.css">
+	<!-- %SCRIPT_REPLACE_MARKER% -->
+</head>
+
+<body style="background-color: black;">
+    <div id="skillTreeContainer">
+        <div class="skillTreePoints" style="display: none;">
+            <div id="skillTreeNormal" class="skillTreeNodes"><span id="skillTreeNormalNodeCount">0</span>/<span
+                    id="skillTreeNormalNodeCountMaximum">121</span></div>
+            <div id="skillTreeAscendancy" class="skillTreeNodes"><span id="skillTreeAscendancyNodeCount">0</span>/<span
+                    id="skillTreeAscendancyNodeCountMaximum">8</span></div>
+        </div>
+        <div class="skillTreeControls" style="display: none;">
+            <input type="text" id="skillTreeControl_Search" placeholder="Search" />
+            <select id="skillTreeControl_Class">
+                <option value="3" selected="selected">Witch</option>
+            </select>
+            <select id="skillTreeControl_Ascendancy">
+                <option value="0" selected="selected">None</option>
+            </select>
+        </div>
+        <div id="skillTreeStats" class="skillTreeStats">
+            <button id="skillTreeStats_ShowHide">Show</button>
+            <div id="skillTreeStats_Content" hidden="hidden"></div>
+        </div>
+        <div class="skillTreeVersions" style="display: none;">
+            <select id="skillTreeControl_Version">
+                <option value="0" selected="selected">Version</option>
+            </select>
+            <select id="skillTreeControl_VersionCompare">
+                <option value="0" selected="selected">Compare</option>
+            </select>
+            <button id="skillTreeControl_VersionGo">Go</button>
+            <button id="skillTreeControl_Reset">Reset</button>
+            <button id="skillTreeControl_Screenshot" style="display: none">Screenshot</button>
+        </div>
+
+        <div id="ad-container" class="ad-container">
+            <div class="ad-consent">
+                <div id="ncmp-consent-link"></div>
+                <span data-ccpa-link="1"></span>
+            </div>
+            <div id="standard-banner"></div>
+        </div>
+    </div>
+</body>
+
+</html>
