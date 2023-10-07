@@ -9,4 +9,7 @@ interface ISkillTreeData extends ISkillTreeV13 {
     getAscendancyClass(): number;
     getSkilledNodes(): { [id: string]: ISkillNode };
     getHoveredNodes(): { [id: string]: ISkillNode };
+    getDesiredNodes(): { [id: string]: ISkillNode };
+    getUndesiredNodes(): { [id: string]: ISkillNode };
+    getClassStartNodes(): { [id: string]: ISkillNode };
 }

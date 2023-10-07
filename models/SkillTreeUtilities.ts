@@ -40,11 +40,11 @@ export class SkillTreeUtilities {
         SkillTreeEvents.on("controls", "ascendancy-class-change", this.changeAscendancyClass);
         SkillTreeEvents.on("controls", "search-change", this.searchChange);
 
-        SkillTreeEvents.on("skilltree", "encode-url", this.encodeURL);
+        SkillTreeEvents.on("skilltree", "encode-url", () => window.location.hash = '#' + this.encodeURL(true));
     }
 
     private lastHash = "";
-    public decodeURL = () => {
+    public decodeURL = (allocated: boolean) => {
         if (this.lastHash === window.location.hash) {
             return;
         }
@@ -57,7 +57,7 @@ export class SkillTreeUtilities {
                 return;
             }
 
-            const def = this.skillTreeCodec.decodeURL(data, this.skillTreeData);
+            const def = this.skillTreeCodec.decodeURL(data, this.skillTreeData, allocated);
             this.skillTreeData.version = def.Version;
             this.skillTreeData.fullscreen = def.Fullscreen;
             this.changeStartClass(def.Class, false);
@@ -65,17 +65,15 @@ export class SkillTreeUtilities {
             for (const node of def.Nodes) {
                 this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Active)
             }
-
-            for (const id in this.skillTreeData.classStartNodes) {
-                if (this.skillTreeData.nodes[id].is(SkillNodeStates.Active)) {
-                    const refund = this.getRefundNodes(this.skillTreeData.nodes[id]);
-                    for (const i of refund) {
-                        this.skillTreeData.removeState(i, SkillNodeStates.Active);
-                    }
-                }
+            for (const node of def.Desired) {
+                this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
+            }
+            for (const node of def.Undesired) {
+                this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.UnDesired)
             }
 
-            this.encodeURL();
+
+            window.location.hash = '#' + this.encodeURL(false);
         }
         catch (ex) {
             window.location.hash = "";
@@ -83,10 +81,10 @@ export class SkillTreeUtilities {
         }
     }
 
-    private encodeURL = () => {
+    public encodeURL = (allocated: boolean) => {
         SkillTreeEvents.fire("skilltree", "active-nodes-update");
         this.broadcastSkillCounts();
-        window.location.hash = `#${this.skillTreeCodec.encodeURL(this.skillTreeData)}`;
+        return `${this.skillTreeCodec.encodeURL(this.skillTreeData, allocated)}`;
     }
 
     private broadcastSkillCounts = () => {
@@ -129,16 +127,14 @@ export class SkillTreeUtilities {
 
             this.skillTreeData.addState(node, SkillNodeStates.Active);
             SkillTreeEvents.fire("skilltree", "class-change", node);
-            for (const i of this.getRefundNodes(node)) {
-                this.skillTreeData.removeState(i, SkillNodeStates.Active);
-            }
         }
-        this.skillTreeData.clearState(SkillNodeStates.Desired);
+        (document.getElementById("skillTreeControl_Class") as HTMLSelectElement).value = String(start);
         this.changeAscendancyClass(0, false);
+        this.allocateNodes();
 
         if (encode) {
-            this.encodeURL();
-        }
+            window.location.hash = '#' + this.encodeURL(false);
+        }        
     }
 
     public changeAscendancyClass = (start: number, encode = true) => {
@@ -154,10 +150,36 @@ export class SkillTreeUtilities {
         const ascClass = ascClasses[start];
         const name = ascClass !== undefined ? ascClass.name : undefined;
 
+        const ascControl = (document.getElementById("skillTreeControl_Ascendancy") as HTMLSelectElement);
+
+        while (ascControl.firstChild) {
+            ascControl.removeChild(ascControl.firstChild);
+        }
+        const none = document.createElement("option");
+        none.text = "None";
+        none.value = "0";
+        ascControl.append(none);
+
+        if (this.skillTreeData.classes.length > 0) {
+            for (const ascid in ascClasses) {
+                const asc = ascClasses[ascid];
+
+                const e = document.createElement("option");
+                e.text = asc.name;
+                e.value = ascid;
+
+                if (+ascid === start) {
+                    e.setAttribute("selected", "selected");
+                }
+                ascControl.append(e);
+            }
+        }
+
         for (const id in this.skillTreeData.ascedancyNodes) {
             const node = this.skillTreeData.nodes[id];
             if (node.ascendancyName !== name) {
                 this.skillTreeData.removeState(node, SkillNodeStates.Active);
+                this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                 continue;
             }
             if (node.isAscendancyStart) {
@@ -168,7 +190,7 @@ export class SkillTreeUtilities {
         }
 
         if (encode) {
-            this.encodeURL();
+            window.location.hash = '#' + this.encodeURL(false);
         }
     }
 
@@ -192,7 +214,6 @@ export class SkillTreeUtilities {
     }
 
     private click = (node: SkillNode) => {
-        const debug = false
         if (node.is(SkillNodeStates.Compared)) {
             return;
         }
@@ -213,12 +234,6 @@ export class SkillTreeUtilities {
             return
         }
 
-        const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && !node.isAscendancyStart)
-        for (const node of nodesToDisable){
-            this.skillTreeData.removeState(node, SkillNodeStates.Active);
-        }
-
-        
         if (this.skillTreeData.tree === "Atlas" && node.isMastery) {
             let groups: Array<number> = []
             for (const id in this.skillTreeData.nodes) {
@@ -270,6 +285,17 @@ export class SkillTreeUtilities {
                 this.skillTreeData.addState(node, SkillNodeStates.Desired);
             }
             SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
+        }
+        
+        
+        this.allocateNodes();
+    }
+
+    public allocateNodes = () => {
+        const debug = false
+        const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && !node.isAscendancyStart)
+        for (const node of nodesToDisable){
+            this.skillTreeData.removeState(node, SkillNodeStates.Active);
         }
         
         const startNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
@@ -351,7 +377,7 @@ export class SkillTreeUtilities {
         this.skillTreeData.clearState(SkillNodeStates.Hovered);
         this.skillTreeData.clearState(SkillNodeStates.Pathing);
         this.skillTreeDataCompare?.clearState(SkillNodeStates.Hovered);
-        this.encodeURL();
+        window.location.hash = '#' + this.encodeURL(false);
     }
 
     private addRoot = (startNodes: Array<SkillNode>, debug: boolean) => {
@@ -492,16 +518,6 @@ export class SkillTreeUtilities {
         }
         node.hoverText = shortest.length.toString();
 
-        if (shortest.length > 0 || node.is(SkillNodeStates.Active)) {
-            const refund = this.getRefundNodes(node);
-            for (const i of refund) {
-                this.skillTreeData.addState(i, SkillNodeStates.Pathing);
-            }
-            if (refund.length > 0) {
-                node.hoverText = refund.length.toString();
-            }
-        }
-
         SkillTreeEvents.fire("skilltree", "hovered-nodes-start", node);
     }
 
@@ -598,66 +614,6 @@ export class SkillTreeUtilities {
             current = prev[current.GetId()];
         }
         return path.reverse();
-    }
-
-    private getRefundNodes = (source: SkillNode): Array<SkillNode> => {
-        let characterStartNode: SkillNode | undefined = undefined;
-        for (const id in this.skillTreeData.classStartNodes) {
-            const node = this.skillTreeData.nodes[id];
-            if (node.is(SkillNodeStates.Active) && node.classStartIndex !== undefined) {
-                characterStartNode = node;
-            }
-        }
-        if (characterStartNode === undefined) {
-            return new Array<SkillNode>();
-        }
-
-        let frontier = new Array<SkillNode>();
-        const reachable: { [id: string]: SkillNode } = {};
-        for (const id of characterStartNode.out) {
-            const out = this.skillTreeData.nodes[id];
-            if (out.ascendancyName !== "" && source.ascendancyName !== "" && out.ascendancyName !== source.ascendancyName) {
-                continue;
-            }
-            if (out.is(SkillNodeStates.Active) && out.GetId() !== source.GetId()) {
-                frontier.push(out);
-                reachable[id] = out;
-            }
-        }
-        while (frontier.length > 0) {
-            const nextFrontier = new Array<SkillNode>();
-            for (const node of frontier) {
-                for (const id of node.out) {
-                    const out = this.skillTreeData.nodes[id];
-                    if (out.isMultipleChoiceOption && source.isMultipleChoiceOption) {
-                        const outchoice = out.in.find(id => this.skillTreeData.nodes[id].isMultipleChoice);
-                        if (outchoice !== undefined && outchoice === source.in.find(id => this.skillTreeData.nodes[id].isMultipleChoice)) {
-                            continue;
-                        }
-                    }
-                    if (out.ascendancyName !== "" && source.ascendancyName !== "" && out.ascendancyName !== source.ascendancyName) {
-                        continue;
-                    }
-                    if (out.GetId() === source.GetId() || reachable[id] || !out.is(SkillNodeStates.Active)) {
-                        continue;
-                    }
-
-                    nextFrontier.push(out);
-                    reachable[id] = out;
-                }
-            }
-
-            frontier = nextFrontier;
-        }
-
-        const unreachable = new Array<SkillNode>();
-        const skilledNodes = this.skillTreeData.getSkilledNodes();
-        for (const id in skilledNodes) {
-            if (/*reachable[id] === undefined && */this.skillTreeData.nodes[id].classStartIndex === undefined) {
-                unreachable.push(this.skillTreeData.nodes[id]);
-            }
-        }
-        return unreachable;
     }
 
     private getAdjacentNodes = (nodeIds: Array<string>) => {

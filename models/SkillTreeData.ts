@@ -41,7 +41,6 @@ export class SkillTreeData implements ISkillTreeData {
         [SkillNodeStates.Desired]: new Array<string>(),
         [SkillNodeStates.UnDesired]: new Array<string>(),
     }
-    desiredNodes: { [id: string]: SkillNode };
 
     constructor(skillTree: ISkillTreeData, patch: SemVer) {
         this.tree = skillTree.tree || "Default";
@@ -154,7 +153,6 @@ export class SkillTreeData implements ISkillTreeData {
         this.nodes = {};
         this.classStartNodes = {};
         this.ascedancyNodes = {};
-        this.desiredNodes = {};
         const orbitAngles = this.getOrbitAngles(skillTree.constants.skillsPerOrbit)
         for (const id in skillTree.nodes) {
             const groupId = skillTree.nodes[id].group || 0;
@@ -269,6 +267,12 @@ export class SkillTreeData implements ISkillTreeData {
     }
 
     public getSkilledNodes = (): { [id: string]: SkillNode } => this.getNodes(SkillNodeStates.Active);
+
+    public getDesiredNodes = (): { [id: string]: SkillNode } => this.getNodes(SkillNodeStates.Desired);
+
+    public getUndesiredNodes = (): { [id: string]: SkillNode } => this.getNodes(SkillNodeStates.UnDesired);
+
+    public getClassStartNodes = (): { [id: string]: SkillNode } => this.classStartNodes;
 
     public getHoveredNodes = (): { [id: string]: SkillNode } => {
         const hovered: { [id: string]: SkillNode } = {};

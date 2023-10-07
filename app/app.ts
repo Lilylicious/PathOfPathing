@@ -114,7 +114,7 @@ export class App {
 
         const exportElement = document.getElementById("skillTreeControl_Export") as HTMLButtonElement;
         exportElement.addEventListener("click", () => {
-            const passiveCode = window.location.hash.substring(1)
+            const passiveCode = this.skillTreeUtilities.encodeURL(true)
             const prefix = 'https://www.pathofexile.com/fullscreen-' + (this.skillTreeData.tree === 'Atlas' ? 'atlas' : 'passive') + '-skill-tree/'
             const url = prefix + passiveCode
             navigator.clipboard.writeText(url);
@@ -140,7 +140,8 @@ export class App {
                 .then(() => {
                     this.SetupEventsAndControls();
                     this.renderer.RenderBase();
-                    this.skillTreeUtilities.decodeURL();
+                    this.skillTreeUtilities.decodeURL(false);
+                    this.skillTreeUtilities.allocateNodes();
                     this.renderer.RenderCharacterStartsActive();
 
                     // const screenshot = document.getElementById("skillTreeControl_Screenshot") as HTMLSelectElement;
