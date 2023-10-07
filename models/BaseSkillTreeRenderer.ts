@@ -675,8 +675,8 @@ export enum HighlightColor {
     Removed = 0xFF0000,
     Moved = 0xFF1493,
     Searched = 0xB452FF,
-    Desired = 0x52FFB4,
-    UnDesired = 0xf47f7f,
+    Desired = 0x0000FF,
+    UnDesired = 0x800020,
 };
 
 export interface ISpriteSheetAsset {
