@@ -4,13 +4,9 @@ This readme is going to get updated later, but a few important notes:
 The project is built on top of [EmmittJ's Skilltree Typescript](https://github.com/EmmittJ/SkillTree_TypeScript/) repository. All credit goes to them for the foundation!
 
 ## Current known issues:
-* The tree never splits into multiple parts based on root nodes. This is particularly noticable in a scion start or in the lower atlas passive tree.
-
 * Poor performance on some devices/browsers. Try enabling hardware acceleration if it's disabled, or use a different browser to see if performance improves.
 
 * Some paths are not quite optimal. I haven't seen a tree with more than one or two points more than needed, but there may be edge cases for this. This is extremely difficult to solve perfectly, give your trees a look-over to see if there's a few points that can be improved after you've made it.
-
-* Ascendancy points are currently essentially nonfunctional in the site. I expect to have this solved within 24 hours but I'm way too tired to fix it right this second, and who really needs a computer to compute an optimal path in an ascendancy?
 
 * Masteries in the main passive tree are not yet supported.
 
