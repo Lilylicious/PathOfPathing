@@ -105,6 +105,7 @@ export class App {
 
             this.skillTreeData.clearState(SkillNodeStates.Active);
             this.skillTreeData.clearState(SkillNodeStates.Desired);
+            this.skillTreeData.clearState(SkillNodeStates.UnDesired);
 
             SkillTreeEvents.fire("controls", "class-change", start);
             SkillTreeEvents.fire("controls", "ascendancy-class-change", asc);
