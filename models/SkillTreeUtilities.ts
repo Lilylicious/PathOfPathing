@@ -163,6 +163,7 @@ export class SkillTreeUtilities {
             if (node.isAscendancyStart) {
                 this.skillTreeData.addState(node, SkillNodeStates.Active);
                 SkillTreeEvents.fire("skilltree", "ascendancy-class-change", node);
+                SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
             }
         }
 
@@ -203,9 +204,17 @@ export class SkillTreeUtilities {
         if (node.classStartIndex !== undefined || node.isAscendancyStart) {
             return;
         }
-        const previousActiveNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && node.ascendancyName === "")
 
-        for (const node of previousActiveNodes){
+        if (node.classStartIndex !== undefined || node.isAscendancyStart) {
+            return;
+        }
+
+        if(node.ascendancyName !== "" && Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.isAscendancyStart)[0].ascendancyName !== node.ascendancyName){
+            return
+        }
+
+        const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && !node.isAscendancyStart)
+        for (const node of nodesToDisable){
             this.skillTreeData.removeState(node, SkillNodeStates.Active);
         }
 
@@ -292,14 +301,8 @@ export class SkillTreeUtilities {
             return 0
         });
         
-        const firstNode = desiredNodes.shift();
-        if(firstNode !== undefined){
-            this.skillTreeData.addState(firstNode, SkillNodeStates.Active);
-            if(debug) console.log('Added', firstNode.id, '(' + firstNode.name + ')')
-            if(desiredNodes.length === 0 && !startNodes.includes(firstNode)){
-                this.addRoot(startNodes, debug)
-            }
 
+        if(desiredNodes.length > 0){
             let count = 0
             while (desiredNodes.length > 0){
                 if(++count > 100){
@@ -310,7 +313,7 @@ export class SkillTreeUtilities {
                 const paths: Array<{ id: string, path: Array<SkillNode> }> = [];
                 for(const node of desiredNodes){
                     const id = node.GetId();
-                    const path = this.getShortestPath(node, true);
+                    const path = this.getShortestPath(node, debug);
                     paths.push({id, path})
                 }
                 if(paths.length == 0){
@@ -395,7 +398,7 @@ export class SkillTreeUtilities {
 
             if (rootNodeAllocated) return;
 
-            let path = this.getShortestPath(closestNode, false)
+            let path = this.getShortestPath(closestNode, debug)
             if(debug) console.log('Root path 1 is', path)
             if(debug) console.log(path.length, closestNode)
 
@@ -510,7 +513,8 @@ export class SkillTreeUtilities {
     }
 
     private getShortestPath = (target: SkillNode, wantDebug: boolean): Array<SkillNode> => {
-        wantDebug = wantDebug && target.id === '5616'
+        const numberActive = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).map(node => node.id).length
+        //wantDebug = wantDebug && target.id === '5616'
         if (target.is(SkillNodeStates.Active)){
             if(wantDebug) console.log('Early return 1')
             return new Array<SkillNode>;
@@ -520,26 +524,20 @@ export class SkillTreeUtilities {
             return new Array<SkillNode>(target);
         }
         let foundNode: SkillNode = target;
-        const startNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
-        .filter(node => node.classStartIndex !== undefined)[0].out
-        .filter(nodeId => this.skillTreeData.nodes[nodeId].isAscendancyStart === false)
-        .map(nodeId => this.skillTreeData.nodes[nodeId]);
-
         const frontier: Array<SkillNode> = [];
         const distance: { [id: string]: number } = {};
         const adjacent = this.getAdjacentNodes([target.GetId()]);
         for (const id in adjacent) {
             const node = adjacent[id];
-            if (node.isAscendancyStart && !node.is(SkillNodeStates.Active)) {
+            if ((node.classStartIndex !== undefined || node.isAscendancyStart) && !node.is(SkillNodeStates.Active)) {
                 continue;
             }
-            if (node.is(SkillNodeStates.UnDesired) || node.classStartIndex !== undefined){
+            if (node.is(SkillNodeStates.UnDesired)){
                 continue;
             }
             frontier.push(adjacent[id]);
-            distance[id] = 1;
+            distance[id] = node.classStartIndex ? 0 : 1;
         }
-        if(wantDebug) console.log(startNodes)
 
 
         const explored: { [id: string]: SkillNode } = {};
@@ -567,21 +565,21 @@ export class SkillTreeUtilities {
                 if (explored[id] || distance[id]) {
                     continue;
                 }
-                if (out.isAscendancyStart && !out.is(SkillNodeStates.Active)) {
+                if ((out.classStartIndex !== undefined || out.isAscendancyStart) && !out.is(SkillNodeStates.Active)) {
                     continue;
                 }
                 
-                if (out.is(SkillNodeStates.UnDesired) || out.classStartIndex !== undefined) {
+                if (out.is(SkillNodeStates.UnDesired)) {
                     continue;
                 }
                 
                 if(wantDebug) console.log('Adding out node to frontier')
-                distance[id] = dist + 1;
+                distance[id] = dist + (out.classStartIndex ? 0 : 1);
                 prev[id] = current2;
                 frontier.push(out);
                 if(wantDebug) console.log('New frontier', frontier.map(node => node.GetId()))
                 if(wantDebug) console.log('Is out active?', out.is(SkillNodeStates.Active))
-                if (out.is(SkillNodeStates.Active) /*|| startNodes.map(node => node.id).includes(out.id)*/) {
+                if (out.is(SkillNodeStates.Active || (numberActive === 0 && out.is(SkillNodeStates.Desired))) /*|| startNodes.map(node => node.id).includes(out.id)*/) {
                     frontier.length = 0;
                     foundNode = out;
                     break;
