@@ -138,6 +138,26 @@
     align-items: end;
 }
 
+a.kofiButton {
+    -webkit-appearance: button;
+    -moz-appearance: button;
+    appearance: button;
+
+
+    height: 1.5em;
+    line-height: 1.5em;
+    cursor: pointer;
+    background: #333;
+    border: 1px solid #999;
+    color: #FFF;
+    margin: 0.125em 0.25em;
+    padding: 0.25em;
+    display: inline-block;
+    text-decoration-line: none;
+    font-size: 0.75em;
+
+}
+
 #standard-banner {
     background: #333;
     border: 1px solid #999;
@@ -152,20 +172,6 @@
 span[data-ccpa-link="1"] span {
     height: 1.5em;
     line-height: 1.5em;
-    cursor: pointer;
-    background: #333;
-    border: 1px solid #999;
-    color: #FFF;
-    margin: 0.125em 0.25em;
-    padding: 0.25em;
-    display: inline-block;
-    text-decoration-line: none;
-    font-size: 0.75em;
-}
-
-#ncmp-consent-link > button {
-    height: 1.5em;
-    line-height: 0.75em;
     cursor: pointer;
     background: #333;
     border: 1px solid #999;
