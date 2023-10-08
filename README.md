@@ -10,8 +10,6 @@ The project is built on top of [EmmittJ's Skilltree Typescript](https://github.c
 
 * Masteries in the main passive tree are not yet supported.
 
-* Opening a link to the website with a passive code in the URL does not currently allocate any nodes. Still undecided on how to handle this, do I just set all notables to desired and let the rest fall where they will?
-
 ## Future plans:
 * Add a help section with instructions to help new users figure out how to use the tool
 
