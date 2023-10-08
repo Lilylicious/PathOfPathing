@@ -289,7 +289,7 @@ export class SkillTreeUtilities {
             else if (node.is(SkillNodeStates.UnDesired)){
                 this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
             }
-            else if (!node.isMastery) {
+            else {
                 this.skillTreeData.addState(node, SkillNodeStates.Desired);
             }
             SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
@@ -348,7 +348,8 @@ export class SkillTreeUtilities {
                 for(const node of desiredNodes){
                     const id = node.GetId();
                     const path = this.getShortestPath(node, debug);
-                    paths.push({id, path})
+                    if(path.length > 0)
+                        paths.push({id, path})
                 }
                 if(paths.length == 0){
                     if(debug) console.log('No paths found')
@@ -578,7 +579,8 @@ export class SkillTreeUtilities {
             explored[current2.GetId()] = current2;
             const dist = distance[current2.GetId()];
             let count = 0
-            for (const id of current2.out) {
+            let adjacent = current2.out.length > 0 ? current2.out : current2.in
+            for (const id of adjacent) {
                 if(++count > 20) break;
                 if(wantDebug) console.log('Current out ID', id)
                 const out = this.skillTreeData.nodes[id];
@@ -627,7 +629,8 @@ export class SkillTreeUtilities {
     private getAdjacentNodes = (nodeIds: Array<string>) => {
         const adjacentNodes: { [id: string]: SkillNode } = {};
         for (const parentId of nodeIds) {
-            for (const id of this.skillTreeData.nodes[parentId].out) {
+            const adjancent = this.skillTreeData.nodes[parentId].out.length > 0 ? this.skillTreeData.nodes[parentId].out : this.skillTreeData.nodes[parentId].in;
+            for (const id of adjancent) {
                 const out = this.skillTreeData.nodes[id];
                 if (out.classStartIndex !== undefined && !out.is(SkillNodeStates.Active)) {
                     continue;
