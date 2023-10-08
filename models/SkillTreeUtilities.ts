@@ -390,8 +390,10 @@ export class SkillTreeUtilities {
         const active = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
 
         const previouslyRemoved: string[] = []
+        const desiredNodesToRecalc: SkillNode[] = []
         for (const activeNode of active){
-            if(!activeNode.is(SkillNodeStates.Desired) && activeNode.nodeGroup !== undefined){
+            if(!activeNode.is(SkillNodeStates.Desired) && activeNode.nodeGroup !== undefined 
+            && activeNode.group !== undefined){
                 const groupNodes = activeNode.nodeGroup.nodes;
                 const nodesToCheck: Array<SkillNode> = []
                 for(const groupNodeId of groupNodes){
@@ -400,7 +402,9 @@ export class SkillTreeUtilities {
                         nodesToCheck.push(groupNode)
                     }
                 }
-                if(nodesToCheck.length < 2) continue;
+                if(nodesToCheck.length < 2) {
+                    continue;
+                }
 
                 let foundAlternatePath = false
                 for(const desiredNode of nodesToCheck){
@@ -410,11 +414,11 @@ export class SkillTreeUtilities {
                         temp.add(nodeId)
                     for(const nodeId of desiredNode.in)
                         temp.add(nodeId)
-                    const outs = [...temp].map(nodeId => this.skillTreeData.nodes[nodeId]).filter(newNode => newNode.id !== activeNode.id)
+                    const outs = [...temp].map(nodeId => this.skillTreeData.nodes[nodeId])
+                    .filter(newNode => newNode.id !== activeNode.id && !newNode.is(SkillNodeStates.UnDesired))
                     frontier.push(...outs)
 
-                    if(desiredNode.nodeGroup === undefined) continue;
-                    const hasBeenFrontier: string[] = []
+                    const visited: string[] = []
                     while(frontier.length > 0){
                         const frontierNode = frontier.shift();
                         if(frontierNode === undefined || previouslyRemoved.includes(frontierNode.id)){
@@ -425,15 +429,19 @@ export class SkillTreeUtilities {
                             temp.add(nodeId)
                         for(const nodeId of frontierNode.in)
                             temp.add(nodeId)
-                        const outs = [...temp].map(nodeId => this.skillTreeData.nodes[nodeId]).filter(newNode => newNode.id !== activeNode.id && !hasBeenFrontier.includes(newNode.id))
+                        const outs = [...temp].map(nodeId => this.skillTreeData.nodes[nodeId])
+                        .filter(newNode => newNode.id !== activeNode.id 
+                            && !visited.includes(newNode.id)
+                            && !previouslyRemoved.includes(frontierNode.id))
                         
                         if(frontierNode && frontierNode.group && frontierNode.group !== desiredNode.group){
                             foundAlternatePath = true;
+                            desiredNodesToRecalc.push(...nodesToCheck)
                             frontier.length = 0
                             break;
                         }
                         frontier.push(...outs)
-                        hasBeenFrontier.push(frontierNode.id)
+                        visited.push(frontierNode.id)
                     }
                     if(foundAlternatePath) break;
                 }
@@ -441,11 +449,49 @@ export class SkillTreeUtilities {
                     this.skillTreeData.removeState(activeNode, SkillNodeStates.Active);
                     previouslyRemoved.push(activeNode.id);
                 }
-                    
             }
         }
-        
 
+        const newDesireds = [...desiredNodesToRecalc]
+        for(const node of newDesireds){
+            this.skillTreeData.removeState(node, SkillNodeStates.Active);
+        }
+        console.log(newDesireds)
+        while (newDesireds.length > 0){
+            const debug = true
+            const paths: Array<{ id: string, path: Array<SkillNode> }> = [];
+            for(const node of newDesireds){
+                const id = node.GetId();
+                const path = this.getShortestPath(node, debug, desiredGroupDistances);
+                if(path.length > 0)
+                    paths.push({id, path})
+            }
+            if(paths.length == 0){
+                if(debug) console.log('No paths found')
+                break;
+            }
+            paths.sort((a,b) => a.path.length - b.path.length)
+            const shortestPath = paths.shift()
+            if (shortestPath === undefined){
+                if(debug) console.log('Shortest path undefined')
+                return;
+            }
+                
+            const shortestPathNode = this.skillTreeData.nodes[shortestPath.id]
+            if (!shortestPathNode.is(SkillNodeStates.Active)) {
+                if(debug) console.log('Added', shortestPathNode.id, '(' + shortestPathNode.name + ')')
+                this.skillTreeData.addState(shortestPathNode, SkillNodeStates.Active);
+            }
+            
+            for (const i of shortestPath.path) {
+                if (!i.is(SkillNodeStates.Active)) {
+                    if(debug) console.log('Added', i.id, '(' + i.name + ')')
+                    this.skillTreeData.addState(i, SkillNodeStates.Active);
+                }
+            }
+            
+            desiredNodes = desiredNodes.filter(node => !node.is(SkillNodeStates.Active))
+        }
 
 
         this.skillTreeData.clearState(SkillNodeStates.Hovered);
@@ -656,6 +702,7 @@ export class SkillTreeUtilities {
     private getShortestPath = (target: SkillNode, wantDebug: boolean, nodeDistanceWeights: {[nodeId: string]: number}): Array<SkillNode> => {
         const numberActive = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).map(node => node.id).length
         //wantDebug = wantDebug && target.id === '5616'
+        if(wantDebug) console.log('Target is', target.id)
         if (target.is(SkillNodeStates.Active)){
             if(wantDebug) console.log('Early return 1')
             return new Array<SkillNode>;
