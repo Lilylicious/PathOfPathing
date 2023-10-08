@@ -90,6 +90,7 @@ export class SkillTreeUtilities {
 
     public encodeURL = (allocated: boolean) => {
         SkillTreeEvents.fire("skilltree", "active-nodes-update");
+        SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
         this.broadcastSkillCounts();
         return `${this.skillTreeCodec.encodeURL(this.skillTreeData, allocated)}`;
     }
