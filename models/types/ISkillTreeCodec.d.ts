@@ -1,8 +1,8 @@
-﻿import { ISkillTreeData } from "./ISkillTreeData";
+import { ISkillTreeData } from "./ISkillTreeData";
 
 interface ISkillTreeCodec {
-    encodeURL(skillTreeData: ISkillTreeData): string;
-    decodeURL(encoding: string, skillTreeData: ISkillTreeData): SkillTreeDefinition;
+    encodeURL(skillTreeData: ISkillTreeData, allocated: boolean): string;
+    decodeURL(encoding: string, skillTreeData: ISkillTreeData, allocated: boolean): SkillTreeDefinition;
 }
 
 type SkillTreeDefinition = {
@@ -12,4 +12,6 @@ type SkillTreeDefinition = {
     Nodes: Array<ISkillNode>;
     ExtendedNodes: Array<ISkillNode>;
     MasteryEffects: Array<[node: ISkillNode, effect: number]>;
+    Desired: Array<ISkillNode>;
+    Undesired: Array<ISkillNode>;
 }

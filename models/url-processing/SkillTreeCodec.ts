@@ -15,7 +15,7 @@ export class SkillTreeCodec implements ISkillTreeCodec {
         new SkillTreeUrlV3Decoder()
     ];
 
-    encodeURL(skillTreeData: ISkillTreeData): string {
+    encodeURL(skillTreeData: ISkillTreeData, allocated: boolean): string {
         const bytes = [];
         const version = 6;
         bytes.push(version >> 24 & 0xFF);
@@ -28,20 +28,39 @@ export class SkillTreeCodec implements ISkillTreeCodec {
         const skilledNodes = skillTreeData.getSkilledNodes();
         const nodes = new Array<ISkillNode>();
         const extendedNodes = new Array<ISkillNode>();
-        for (const id in skilledNodes) {
-            const node = skilledNodes[id];
-            if (node.classStartIndex !== undefined || node.isAscendancyStart) {
-                continue;
+        const desiredNodes = skillTreeData.getDesiredNodes();
+        const undesiredNodes = skillTreeData.getUndesiredNodes();
+        
+        if(!allocated){
+            for (const id in desiredNodes) {
+                nodes.push(desiredNodes[id]);
             }
-            if (node.expansionJewel !== undefined) {
-                extendedNodes.push(node);
-            } else {
-                nodes.push(node);
+            for (const id in undesiredNodes) {
+                nodes.push(undesiredNodes[id]);
             }
+            const rootNode = Object.values(skillTreeData.getClassStartNodes()).filter(node => Object.keys(skilledNodes).includes(node.id || String(node.skill)))[0];
+            nodes.push(rootNode)
+        } else {
+            for (const id in skilledNodes) {
+                const node = skilledNodes[id];
+                if (node.classStartIndex !== undefined || node.isAscendancyStart) {
+                    continue;
+                }
+                if (node.expansionJewel !== undefined) {
+                    extendedNodes.push(node);
+                } else {
+                    nodes.push(node);
+                }
+            }
+            nodes.sort((a, b) => { return +(a.id || a.skill) - +(b.id || a.skill) });
         }
-        nodes.sort((a, b) => { return +(a.id || a.skill) - +(b.id || a.skill) });
+        
 
         bytes.push(nodes.length);
+        if(!allocated){
+            bytes.push(Object.keys(desiredNodes).length)
+            bytes.push(Object.keys(undesiredNodes).length)
+        }
         for (const node of nodes) {
             bytes.push(+(node.id || node.skill) >> 8 & 0xFF);
             bytes.push(+(node.id || node.skill) & 0xFF);
@@ -70,16 +89,18 @@ export class SkillTreeCodec implements ISkillTreeCodec {
         return this.Uint8ArryToBase64(new Uint8Array(bytes));
     }
 
-    decodeURL(encoding: string, skillTreeData: ISkillTreeData): SkillTreeDefinition {
+    decodeURL(encoding: string, skillTreeData: ISkillTreeData, allocated: boolean): SkillTreeDefinition {
         const bytes = this.Base64ToUint8Array(encoding);
-        const data = this.decode(bytes);
+        const data = this.decode(bytes, allocated);
         const skillTreeDefinition: SkillTreeDefinition = {
             Version: data.version,
             Class: data.class,
             Ascendancy: data.ascendancy,
             Nodes: [],
             ExtendedNodes: [],
-            MasteryEffects: []
+            MasteryEffects: [],
+            Desired: new Array<ISkillNode>(),
+            Undesired: new Array<ISkillNode>()
         };
 
 
@@ -87,6 +108,20 @@ export class SkillTreeCodec implements ISkillTreeCodec {
             const node = skillTreeData.nodes[id.toString()];
             if (node !== undefined) {
                 skillTreeDefinition.Nodes.push(node);
+            }
+        }
+
+        for (const id of data.desiredNodes) {
+            const node = skillTreeData.nodes[id.toString()];
+            if (node !== undefined) {
+                skillTreeDefinition.Desired.push(node);
+            }
+        }
+
+        for (const id of data.undesiredNodes) {
+            const node = skillTreeData.nodes[id.toString()];
+            if (node !== undefined) {
+                skillTreeDefinition.Undesired.push(node);
             }
         }
 
@@ -103,14 +138,13 @@ export class SkillTreeCodec implements ISkillTreeCodec {
                 skillTreeDefinition.MasteryEffects.push([node, effect]);
             }
         }
-
         return skillTreeDefinition;
     }
 
-    decode(bytes: Uint8Array): ISkillTreeUrlData {
+    decode(bytes: Uint8Array, allocated: boolean): ISkillTreeUrlData {
         for (const decoder of SkillTreeCodec._decoders) {
             if (decoder.canDecode(bytes)) {
-                return decoder.decode(bytes);
+                return decoder.decode(bytes, allocated);
             }
         }
 
@@ -123,7 +157,9 @@ export class SkillTreeCodec implements ISkillTreeCodec {
             extendedNodeCount: 0,
             extendedNodes: [],
             masteryEffectCount: 0,
-            masteryEffects: []
+            masteryEffects: [],
+            desiredNodes: [],
+            undesiredNodes: []
         }
     }
 

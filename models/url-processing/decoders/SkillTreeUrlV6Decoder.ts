@@ -6,28 +6,50 @@ export class SkillTreeUrlV6Decoder implements ISkillTreeUrlDecoder {
         return bytes.length >= 9 && this.version(bytes) == 6;
     }
 
-    decode(bytes: Uint8Array): ISkillTreeUrlData {
+    decode(bytes: Uint8Array, allocated: boolean): ISkillTreeUrlData {
         const version = this.version(bytes);
         const _class = this.class(bytes);
         const ascendancy = this.ascendancy(bytes);
         let offset = 6;
 
         const nodeCount = bytes[offset++];
+        const desiredNodeCount = allocated ? 0 : bytes[offset++];
+        const unDesiredNodeCount = allocated ? 0 : bytes[offset++];
+
         const nodes = new Array<number>()
-        for (let i = 0; i < nodeCount; i++) {
-            if (offset + 1 > bytes.length) {
-                break;
+        const extendedNodes = new Array<number>()
+        const desiredNodes = new Array<number>()
+        const unDesiredNodes = new Array<number>()
+        if(allocated) {
+            for (let i = 0; i < nodeCount; i++) {
+                if (offset + 1 > bytes.length) {
+                    break;
+                }
+                nodes.push(bytes[offset++] << 8 | bytes[offset++])
+            }
+
+            const extendedNodeCount = bytes[offset++];
+            for (let i = 0; i < extendedNodeCount; i++) {
+                if (offset + 1 > bytes.length) {
+                    break;
+                }
+                extendedNodes.push(bytes[offset++] << 8 | bytes[offset++])
+            }
+        } else {
+            for (let i = 0; i < desiredNodeCount; i++) {
+                if (offset + 1 > bytes.length) {
+                    break;
+                }
+                desiredNodes.push(bytes[offset++] << 8 | bytes[offset++])
+            }
+
+            for (let i = 0; i < unDesiredNodeCount; i++) {
+                if (offset + 1 > bytes.length) {
+                    break;
+                }
+                unDesiredNodes.push(bytes[offset++] << 8 | bytes[offset++])
             }
             nodes.push(bytes[offset++] << 8 | bytes[offset++])
-        }
-
-        const extendedNodeCount = bytes[offset++];
-        const extendedNodes = new Array<number>()
-        for (let i = 0; i < extendedNodeCount; i++) {
-            if (offset + 1 > bytes.length) {
-                break;
-            }
-            extendedNodes.push(bytes[offset++] << 8 | bytes[offset++])
         }
 
         const masteryEffectCount = bytes[offset++];
@@ -40,7 +62,6 @@ export class SkillTreeUrlV6Decoder implements ISkillTreeUrlDecoder {
             var id = bytes[offset++] << 8 | bytes[offset++];
             masteryEffects.push([id, effect]);
         }
-
         return {
             version: version,
             class: _class,
@@ -50,7 +71,9 @@ export class SkillTreeUrlV6Decoder implements ISkillTreeUrlDecoder {
             extendedNodeCount: extendedNodes.length,
             extendedNodes: extendedNodes,
             masteryEffectCount: masteryEffects.length,
-            masteryEffects: masteryEffects
+            masteryEffects: masteryEffects,
+            desiredNodes: desiredNodes,
+            undesiredNodes: unDesiredNodes
         }
     }
 

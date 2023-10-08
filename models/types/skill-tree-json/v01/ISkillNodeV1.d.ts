@@ -1,4 +1,4 @@
-﻿interface ISkillNodeV1 extends IRootNodeV1 {
+interface ISkillNodeV1 extends IRootNodeV1 {
     /** Id of the SkillNode */
     id: number;
 
@@ -22,4 +22,7 @@
 
     /** The stat descriptions of the SkillNode */
     sd: Array<string>;
+
+    /** The pregenerated distance to other nodes */
+    distance: { [key: string]: number }
 }

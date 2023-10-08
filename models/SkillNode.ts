@@ -1,4 +1,4 @@
-﻿import { SemVer } from "semver";
+import { SemVer } from "semver";
 import { utils } from "../app/utils";
 
 export declare type DrawType = "Allocated" | "Active" | "CanAllocate" | "Unallocated" | "Normal" | "Highlight";
@@ -11,6 +11,8 @@ export enum SkillNodeStates {
     Highlighted = 1 << 3,
     Compared = 1 << 4,
     Moved = 1 << 5,
+    Desired = 1 << 6,
+    UnDesired = 1 << 7,
 }
 
 export enum ConnectionStyle {
@@ -67,6 +69,7 @@ export class SkillNode implements ISkillNode {
     isRegular1: boolean;
     hoverText: string | null = null;
     patch: SemVer;
+    distance: { [node: string]: number };
 
     constructor(id: string, node: ISkillNode, group: IGroup | undefined, orbitRadii: Array<number>, orbitAngles: { [orbit: number]: Array<number> }, scale: number, patch: SemVer) {
         this.id = id;
@@ -103,6 +106,7 @@ export class SkillNode implements ISkillNode {
         this.reminderText = node.recipe || [];
         this.skill = node.skill;
         this.stats = node.stats;
+        this.distance = node.distance;
 
         this.state = SkillNodeStates.None;
 

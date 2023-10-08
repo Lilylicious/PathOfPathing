@@ -1,4 +1,4 @@
-﻿import { SemVer } from "semver";
+import { SemVer } from "semver";
 import { utils } from "../app/utils";
 import { ConnectionStyle, DrawType, SkillNode, SkillNodeStates } from "./SkillNode";
 import { SkillTreeData } from "./SkillTreeData";
@@ -553,6 +553,16 @@ export abstract class BaseSkillTreeRenderer implements ISkillTreeRenderer {
             highlights.push({ node: nodes[id], color: HighlightColor.Searched });
         }
 
+        const desiredNodes = this.skillTreeData.getNodes(SkillNodeStates.Desired);
+        for (const id in desiredNodes) {
+            highlights.push({ node: desiredNodes[id], color: HighlightColor.Desired });
+        }
+
+        const unDesiredNodes = this.skillTreeData.getNodes(SkillNodeStates.UnDesired);
+        for (const id in unDesiredNodes) {
+            highlights.push({ node: unDesiredNodes[id], color: HighlightColor.UnDesired });
+        }
+
         this.DrawHighlights(RenderLayer.Highlights, highlights);
     }
 
@@ -664,7 +674,9 @@ export enum HighlightColor {
     Changed = 0xFFB000,
     Removed = 0xFF0000,
     Moved = 0xFF1493,
-    Searched = 0xB452FF
+    Searched = 0xB452FF,
+    Desired = 0x40E0D0,
+    UnDesired = 0x800020,
 };
 
 export interface ISpriteSheetAsset {

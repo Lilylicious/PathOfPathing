@@ -1,4 +1,4 @@
-﻿import '../content/app.css';
+import '../content/app.css';
 
 import { SkillTreeData } from "../models/SkillTreeData";
 import { SkillTreeEvents } from "../models/SkillTreeEvents";
@@ -6,11 +6,11 @@ import { ISkillTreeRenderer } from '../models/types/ISkillTreeRenderer';
 import { PIXISkillTreeRenderer } from '../models/PIXISkillTreeRenderer';
 import download from 'downloadjs';
 import { SkillTreeUtilities } from '../models/SkillTreeUtilities';
-import { SkillNodeStates } from '../models/SkillNode';
+import { ConnectionStyle, SkillNode, SkillNodeStates } from '../models/SkillNode';
 import { utils } from './utils';
 import { SkillTreePreprocessors } from '../models/skill-tree/SkillTreePreprocessors';
 import { SemVer } from 'semver';
-import { versions } from '../models/versions/verions';
+import internal from 'stream';
 
 export class App {
     private skillTreeData!: SkillTreeData;
@@ -26,10 +26,10 @@ export class App {
 
             let options: ISkillTreeOptions | undefined = undefined;
             const semver = new SemVer(i);
-            if (semver.compare(versions.v2_2_0) >= 0 && semver.compare(versions.v3_9_0) <= 0) {
-                options = await fetch(`${utils.SKILL_TREES_URI}/${i}/Opts.json`).then(response => response.status === 200 ? response.json() : undefined);
-            }
-            var json = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree.json`).then(response => response.json()) as ISkillTreeBase;
+            var file = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree.json`).then(response => response.json());
+            var json = file as ISkillTreeBase;
+            //this.SetupPregeneration(file)
+
             const data = new SkillTreeData(SkillTreePreprocessors.Decode(json, options), semver);
 
             if (i === version) {
@@ -81,9 +81,20 @@ export class App {
             const asc = this.skillTreeData.getAscendancyClass();
 
             this.skillTreeData.clearState(SkillNodeStates.Active);
+            this.skillTreeData.clearState(SkillNodeStates.Desired);
+            this.skillTreeData.clearState(SkillNodeStates.UnDesired);
 
             SkillTreeEvents.fire("controls", "class-change", start);
             SkillTreeEvents.fire("controls", "ascendancy-class-change", asc);
+            SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
+        });
+
+        const exportElement = document.getElementById("skillTreeControl_Export") as HTMLButtonElement;
+        exportElement.addEventListener("click", () => {
+            const passiveCode = this.skillTreeUtilities.encodeURL(true)
+            const prefix = 'https://www.pathofexile.com/fullscreen-' + (this.skillTreeData.tree === 'Atlas' ? 'atlas' : 'passive') + '-skill-tree/'
+            const url = prefix + passiveCode
+            navigator.clipboard.writeText(url);
         });
 
         const showhide = document.getElementById("skillTreeStats_ShowHide") as HTMLButtonElement;
@@ -106,18 +117,140 @@ export class App {
                 .then(() => {
                     this.SetupEventsAndControls();
                     this.renderer.RenderBase();
-                    this.skillTreeUtilities.decodeURL();
+                    this.skillTreeUtilities.decodeURL(false);
+                    this.skillTreeUtilities.allocateNodes();
                     this.renderer.RenderCharacterStartsActive();
 
-                    const screenshot = document.getElementById("skillTreeControl_Screenshot") as HTMLSelectElement;
-                    screenshot.style.removeProperty('display');
-                    screenshot.addEventListener("click", () => {
-                        const mimeType: 'image/jpeg' = 'image/jpeg';
-                        download(this.renderer.CreateScreenshot(mimeType), `${version.replace(/\./g, '')}_skilltree.jpg`, mimeType);
-                    });
+                    // const screenshot = document.getElementById("skillTreeControl_Screenshot") as HTMLSelectElement;
+                    // screenshot.style.removeProperty('display');
+                    // screenshot.addEventListener("click", () => {
+                    //     const mimeType: 'image/jpeg' = 'image/jpeg';
+                    //     download(this.renderer.CreateScreenshot(mimeType), `${version.replace(/\./g, '')}_skilltree.jpg`, mimeType);
+                    // });
                 })
                 .catch((reason) => console.error(reason));
         }
+    }
+
+    private SetupPregeneration = (file) => {
+        
+        const sourceNodes = Object.values(file.nodes).map(node => node.skill);
+        let destinationNodes = []
+
+        // let sourceNodes = Object.values(file.nodes).filter(
+        //     node => node.ascendancyName === undefined && node.group !== 0 
+        //     && (node.isNotable === true || node.isKeystone === true) 
+        //     && ((node.out !== undefined && node.out.length > 0) 
+        //     || (node.in !== undefined && node.in.length > 0))).map(node => Number(node.skill));
+
+        for (const nodeId of file.nodes.root.out){
+            let actualNodes = []
+            actualNodes.push(...file.nodes[nodeId].out)
+            actualNodes.push(...file.nodes[nodeId].in)
+            for (const secondNodeId of actualNodes) {
+                let startNode = file.nodes[secondNodeId]
+                if (startNode.isAscendancyStart === undefined){
+                    destinationNodes.push(Number(secondNodeId))
+                }
+                    
+            }
+        }
+        //const destinationNodes = sourceNodes;
+        
+        this.PreGenerateShortestDistances(file, sourceNodes, destinationNodes);
+    }
+
+    private PreGenerateShortestDistances = (file, sourceNodes, destinationNodes) => {
+        let verbose = false
+        if(file.tree === 'Default')
+        return;
+        const nodes = file.nodes
+        console.log('Shortest distances started')
+        for (const nodeId in nodes){
+            file.nodes[nodeId].distance = {}
+        }
+        console.log('Reset done')
+
+        let count = 0
+        console.log('Checking ' + sourceNodes.length + '')
+        console.log(destinationNodes)
+        for (const sourceId of sourceNodes){   
+            if (sourceId === "root"){
+                console.log('Skipping root')
+                continue;
+            }
+
+            if(sourceId === undefined || nodes[sourceId] === undefined){
+                console.log('Skipping undefined node')
+                continue;
+            }
+            
+            // if(file.tree === 'Atlas' && nodes[sourceId].isMastery !== 'undefined'){
+            //     console.log('Skipping mastery')
+            //     continue;
+            // }
+            //const sourceId = 6
+            if (file.tree !== 'Atlas' && nodes[sourceId].ascendancyName !== undefined){
+                continue;
+            }      
+
+            //console.log('Skipping mastery')
+
+            if((nodes[sourceId].out === undefined && nodes[sourceId].in === undefined)
+            || (nodes[sourceId].out && nodes[sourceId].out.length === 0 && nodes[sourceId].in && nodes[sourceId].in.length === 0)){
+                console.log('Skipping no out or in')
+                continue;
+            }
+
+            // if(count > 100)
+            //     break;
+
+            let distance: { [id: string]: number } = {};
+            distance[sourceId] = 0;
+            const frontier: Array<SkillNode> = [nodes[sourceId]];
+            const explored: { [id: string]: SkillNode } = {}
+            while (frontier.length > 0) {
+                const current = frontier.shift();
+                if (current === undefined) {
+                    continue;
+                }
+                if(sourceId === 65499 && current.skill === 5515){
+                    console.log('verbose enabled')
+                    verbose = true
+                }
+                
+                //console.log('Checking', sourceId + ': ' + current.skill)
+                explored[current.skill] = current;
+                const dist = distance[current.skill];
+                let actualNodes = []
+                if(current.out)actualNodes.push(...current.out)
+                if(current.in)actualNodes.push(...current.in)
+                for (const id of actualNodes) {
+                    const out = nodes[id];
+                    if (out.ascendancyName !== "" && out.ascendancyName !== undefined) {
+                        continue;
+                    }
+                    if (explored[id] || distance[id]) {
+                        continue;
+                    }
+
+                    if(destinationNodes.includes(Number(id))){
+                        file.nodes[sourceId].distance[id] = dist + 1;
+                    }
+    
+                    count++
+                    distance[id] = dist + 1;
+                    frontier.push(out);
+                }
+            }
+        }
+        console.log('Total frontier checks: ' + count);
+
+        var a = document.createElement("a");
+        var newFile = new Blob([JSON.stringify(file, null, 4)], {type: 'text/plain'});
+        a.href = URL.createObjectURL(newFile);
+        a.download = 'UpdatedTree.json';
+        a.click();
     }
 
     private SetupEventsAndControls = () => {
@@ -363,31 +496,6 @@ export class App {
             return;
         }
 
-        const ascStart = startasc !== undefined ? startasc : this.skillTreeData.getAscendancyClass();
-        const none = document.createElement("option");
-        none.text = "None";
-        none.value = "0";
-        if (ascStart === 0) {
-            none.setAttribute("selected", "selected");
-        }
-        ascControl.append(none);
-
-        const startClass = start !== undefined ? start : this.skillTreeData.getStartClass();
-        if (this.skillTreeData.classes.length > 0) {
-            const ascendancies = this.skillTreeData.classes[startClass].ascendancies;
-            for (const ascid in ascendancies) {
-                const asc = ascendancies[ascid];
-
-                const e = document.createElement("option");
-                e.text = asc.name;
-                e.value = ascid;
-
-                if (+ascid === ascStart) {
-                    e.setAttribute("selected", "selected");
-                }
-                ascControl.append(e);
-            }
-        }
 
         ascControl.onchange = () => {
             SkillTreeEvents.fire("controls", "ascendancy-class-change", +ascControl.value);

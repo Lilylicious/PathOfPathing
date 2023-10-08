@@ -1,4 +1,4 @@
-﻿import { SkillNode, SkillNodeStates } from "./SkillNode";
+import { SkillNode, SkillNodeStates } from "./SkillNode";
 import { Constants } from "./Constants";
 import { SemVer } from "semver";
 import { versions } from "./versions/verions";
@@ -38,6 +38,8 @@ export class SkillTreeData implements ISkillTreeData {
         [SkillNodeStates.Highlighted]: new Array<string>(),
         [SkillNodeStates.Compared]: new Array<string>(),
         [SkillNodeStates.Moved]: new Array<string>(),
+        [SkillNodeStates.Desired]: new Array<string>(),
+        [SkillNodeStates.UnDesired]: new Array<string>(),
     }
 
     constructor(skillTree: ISkillTreeData, patch: SemVer) {
@@ -112,7 +114,7 @@ export class SkillTreeData implements ISkillTreeData {
                         // Scion
                         baseX = this.min_x * .65;
                         baseY = this.max_y * .95;
-                        if (this.patch.compare(versions.v3_16_0) >= 0) {
+                        if (this.patch.compare(versions.v3_22_0) >= 0) {
                             baseX = this.min_x * .85;
                             baseY = this.max_y * .85;
                         }
@@ -124,7 +126,7 @@ export class SkillTreeData implements ISkillTreeData {
                         // Templar, Marauder, Ranger, Shadow 
                         baseX = startGroup.x < 0 ? this.min_x * .80 : this.max_x;
                         baseY = startGroup.y + (Math.sign(startGroup.y) * (offset + 1) * offsetDistance);
-                        if (this.patch.compare(versions.v3_16_0) >= 0) {
+                        if (this.patch.compare(versions.v3_22_0) >= 0) {
                             baseX = startGroup.x < 0 ? this.min_x * 1.05 : this.max_x;
                         }
                     }
@@ -266,6 +268,12 @@ export class SkillTreeData implements ISkillTreeData {
 
     public getSkilledNodes = (): { [id: string]: SkillNode } => this.getNodes(SkillNodeStates.Active);
 
+    public getDesiredNodes = (): { [id: string]: SkillNode } => this.getNodes(SkillNodeStates.Desired);
+
+    public getUndesiredNodes = (): { [id: string]: SkillNode } => this.getNodes(SkillNodeStates.UnDesired);
+
+    public getClassStartNodes = (): { [id: string]: SkillNode } => this.classStartNodes;
+
     public getHoveredNodes = (): { [id: string]: SkillNode } => {
         const hovered: { [id: string]: SkillNode } = {};
 
@@ -353,6 +361,6 @@ export class SkillTreeData implements ISkillTreeData {
     public hasSprite = (sheet: SpriteSheetKey, icon: string): boolean => {
         return this.sprites[sheet] &&
             ((this.sprites[sheet][this.scale.toString()] && this.sprites[sheet][this.scale.toString()].coords[icon] !== undefined)
-                || (this.sprites[sheet]["1"] && this.sprites[sheet]["1"].coords[icon] !== undefined))
+            || (this.sprites[sheet]["1"] && this.sprites[sheet]["1"].coords[icon] !== undefined))
     }
 }

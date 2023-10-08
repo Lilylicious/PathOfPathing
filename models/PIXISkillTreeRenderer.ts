@@ -1,4 +1,4 @@
-﻿import { SkillTreeData } from './SkillTreeData';
+import { SkillTreeData } from './SkillTreeData';
 import { Viewport } from 'pixi-viewport';
 import * as PIXI from 'pixi.js';
 import { Assets } from '@pixi/assets';
@@ -48,12 +48,13 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         super(container, skillTreeData, skillTreeDataCompare);
         this.NodeTooltips = {};
         this.NodeSpritesheets = {};
+        const version = skillTreeData.tree === 'Atlas' ? versions.v3_22_0_atlas : versions.v3_22_0;
 
         this.pixi = new PIXI.Application({
             resizeTo: window,
             resolution: devicePixelRatio,
             sharedTicker: true,
-            backgroundColor: skillTreeData.patch.compare(versions.v3_16_0) >= 0 ? 0x070b10 : 0x1a1411
+            backgroundColor: skillTreeData.patch.compare(version) >= 0 ? 0x070b10 : 0x1a1411
         });
         PIXI.Ticker.shared.stop();
         PIXI.Ticker.system.stop();
@@ -89,7 +90,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         this.viewport.on('touchcancel', () => SkillTreeEvents.fire("viewport", "touchcancel"));
         this.viewport.on('click', (click) => this.HandleZoomClick(click, zoomPercent * 2));
         this.viewport.on('click', this.HandleShiftClick);
-        this.viewport.on('rightclick', (click) => this.HandleZoomClick(click, -zoomPercent * 2));
+        this.viewport.on('rightdown', (click) => this.HandleZoomClick(click, -zoomPercent * 2));
 
         this.pixi.stage.addChild(this.viewport);
 
@@ -108,7 +109,8 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         if (!click.ctrlKey) {
             return;
         }
-
+        click.preventDefault()
+        
         this.viewport.zoomPercent(zoom, false);
     }
 
@@ -219,13 +221,13 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
                     for (const coord in sheet.coords) {
                         if (addedAssets.indexOf(coord) < 0) {
                             addedAssets.push(coord);
-                            Assets.add({ alias: coord, src: `${utils.SKILL_TREES_URI}/${i.patch}/assets/${coord}.png` })
+                            Assets.add(coord, `${utils.SKILL_TREES_URI}/${i.patch}/assets/${coord}.png`);
                         }
                     }
                 } else {
                     if (addedAssets.indexOf(filename) < 0) {
                         addedAssets.push(filename);
-                        Assets.add({ alias: filename, src: `${utils.SKILL_TREES_URI}/${i.patch}/assets/${filename}` });
+                        Assets.add(filename, `${utils.SKILL_TREES_URI}/${i.patch}/assets/${filename}`);
                     }
                 }
             }
@@ -756,12 +758,14 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
 
     private CreateTooltip = (node: SkillNode) => {
         let tooltip: PIXI.Container | undefined = this.NodeTooltips[`${node.GetId()}_${node.patch}`];
+        const desiredNodes = this.skillTreeData.getNodes(SkillNodeStates.Desired);
 
         if (tooltip === undefined) {
             let title: PIXI.Text | null = node.name.length > 0 ? new PIXI.Text(`${node.name} [${node.id}]`, { fill: 0xFFFFFF, fontSize: 18 }) : null;
             let stats: PIXI.Text | null = node.stats.filter(utils.NotNullOrWhiteSpace).length > 0 ? new PIXI.Text(`\n${node.stats.filter(utils.NotNullOrWhiteSpace).join('\n')}`, { fill: 0xFFFFFF, fontSize: 14 }) : null;
             let flavour: PIXI.Text | null = node.flavourText.filter(utils.NotNullOrWhiteSpace).length > 0 ? new PIXI.Text(`\n${node.flavourText.filter(utils.NotNullOrWhiteSpace).join('\n')}`, { fill: 0xAF6025, fontSize: 14 }) : null;
             let reminder: PIXI.Text | null = node.reminderText.filter(utils.NotNullOrWhiteSpace).length > 0 ? new PIXI.Text(`\n${node.reminderText.filter(utils.NotNullOrWhiteSpace).join('\n')}`, { fill: 0x808080, fontSize: 14 }) : null;
+            let desired: PIXI.Text | null = desiredNodes[node.id] !== undefined ? new PIXI.Text(`Desired`, { fill: 0xFFFFFF, fontSize: 18 }) : null;
 
             tooltip = new PIXI.Container();
             tooltip.position.set(0, 0);
@@ -788,6 +792,12 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
                 tooltip.addChild(reminder);
                 reminder.position.set(0, height);
                 height += reminder.height;
+            }
+
+            if (desired !== null) {
+                tooltip.addChild(desired);
+                desired.position.set(0, height);
+                height += desired.height;
             }
 
             tooltip.eventMode = 'none';
