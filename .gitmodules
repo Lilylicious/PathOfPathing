@@ -1,3 +1,0 @@
-[submodule "dist/data/skill-trees"]
-	path = dist/data/skill-trees
-	url = https://github.com/poe-tool-dev/passive-skill-tree-json
