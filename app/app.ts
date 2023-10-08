@@ -28,31 +28,8 @@ export class App {
             const semver = new SemVer(i);
             var file = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree.json`).then(response => response.json());
             var json = file as ISkillTreeBase;
+            //this.SetupPregeneration(file)
 
-            const sourceNodes = Object.values(file.nodes).map(node => node.skill);
-            let destinationNodes = []
-
-            // let sourceNodes = Object.values(file.nodes).filter(
-            //     node => node.ascendancyName === undefined && node.group !== 0 
-            //     && (node.isNotable === true || node.isKeystone === true) 
-            //     && ((node.out !== undefined && node.out.length > 0) 
-            //     || (node.in !== undefined && node.in.length > 0))).map(node => Number(node.skill));
-
-            for (const nodeId of file.nodes.root.out){
-                let actualNodes = []
-                actualNodes.push(...file.nodes[nodeId].out)
-                actualNodes.push(...file.nodes[nodeId].in)
-                for (const secondNodeId of actualNodes) {
-                    let startNode = file.nodes[secondNodeId]
-                    if (startNode.isAscendancyStart === undefined){
-                        destinationNodes.push(Number(secondNodeId))
-                    }
-                        
-                }
-            }
-            //const destinationNodes = sourceNodes;
-            
-            //this.PreGenerateShortestDistances(file, sourceNodes, destinationNodes)
             const data = new SkillTreeData(SkillTreePreprocessors.Decode(json, options), semver);
 
             if (i === version) {
@@ -153,6 +130,34 @@ export class App {
                 })
                 .catch((reason) => console.error(reason));
         }
+    }
+
+    private SetupPregeneration = (file) => {
+        
+        const sourceNodes = Object.values(file.nodes).map(node => node.skill);
+        let destinationNodes = []
+
+        // let sourceNodes = Object.values(file.nodes).filter(
+        //     node => node.ascendancyName === undefined && node.group !== 0 
+        //     && (node.isNotable === true || node.isKeystone === true) 
+        //     && ((node.out !== undefined && node.out.length > 0) 
+        //     || (node.in !== undefined && node.in.length > 0))).map(node => Number(node.skill));
+
+        for (const nodeId of file.nodes.root.out){
+            let actualNodes = []
+            actualNodes.push(...file.nodes[nodeId].out)
+            actualNodes.push(...file.nodes[nodeId].in)
+            for (const secondNodeId of actualNodes) {
+                let startNode = file.nodes[secondNodeId]
+                if (startNode.isAscendancyStart === undefined){
+                    destinationNodes.push(Number(secondNodeId))
+                }
+                    
+            }
+        }
+        //const destinationNodes = sourceNodes;
+        
+        this.PreGenerateShortestDistances(file, sourceNodes, destinationNodes);
     }
 
     private PreGenerateShortestDistances = (file, sourceNodes, destinationNodes) => {
@@ -491,31 +496,6 @@ export class App {
             return;
         }
 
-        const ascStart = startasc !== undefined ? startasc : this.skillTreeData.getAscendancyClass();
-        const none = document.createElement("option");
-        none.text = "None";
-        none.value = "0";
-        if (ascStart === 0) {
-            none.setAttribute("selected", "selected");
-        }
-        ascControl.append(none);
-
-        const startClass = start !== undefined ? start : this.skillTreeData.getStartClass();
-        if (this.skillTreeData.classes.length > 0) {
-            const ascendancies = this.skillTreeData.classes[startClass].ascendancies;
-            for (const ascid in ascendancies) {
-                const asc = ascendancies[ascid];
-
-                const e = document.createElement("option");
-                e.text = asc.name;
-                e.value = ascid;
-
-                if (+ascid === ascStart) {
-                    e.setAttribute("selected", "selected");
-                }
-                ascControl.append(e);
-            }
-        }
 
         ascControl.onchange = () => {
             SkillTreeEvents.fire("controls", "ascendancy-class-change", +ascControl.value);
