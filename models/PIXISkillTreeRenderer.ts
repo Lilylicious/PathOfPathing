@@ -48,12 +48,13 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         super(container, skillTreeData, skillTreeDataCompare);
         this.NodeTooltips = {};
         this.NodeSpritesheets = {};
+        const version = skillTreeData.tree === 'Atlas' ? versions.v3_22_0_atlas : versions.v3_22_0;
 
         this.pixi = new PIXI.Application({
             resizeTo: window,
             resolution: devicePixelRatio,
             sharedTicker: true,
-            backgroundColor: skillTreeData.patch.compare(versions.v3_22_0) >= 0 ? 0x070b10 : 0x1a1411
+            backgroundColor: skillTreeData.patch.compare(version) >= 0 ? 0x070b10 : 0x1a1411
         });
         PIXI.Ticker.shared.stop();
         PIXI.Ticker.system.stop();
