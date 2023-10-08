@@ -5,6 +5,7 @@ import * as PIXI from "pixi.js";
 import { SkillTreeCodec } from "./url-processing/SkillTreeCodec";
 import { sleep } from "bun";
 import { beforeAll } from "bun:test";
+import { group } from "console";
 
 export class SkillTreeUtilities {
     private dragStart: PIXI.Point;
@@ -384,6 +385,68 @@ export class SkillTreeUtilities {
                 }
             }
         }
+
+        //This breaks whispers of doom cluster
+        const active = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
+
+        const previouslyRemoved: string[] = []
+        for (const activeNode of active){
+            if(!activeNode.is(SkillNodeStates.Desired) && activeNode.nodeGroup !== undefined){
+                const groupNodes = activeNode.nodeGroup.nodes;
+                const nodesToCheck: Array<SkillNode> = []
+                for(const groupNodeId of groupNodes){
+                    const groupNode = this.skillTreeData.nodes[groupNodeId];
+                    if(groupNode.is(SkillNodeStates.Desired)){
+                        nodesToCheck.push(groupNode)
+                    }
+                }
+                if(nodesToCheck.length < 2) continue;
+
+                let foundAlternatePath = false
+                for(const desiredNode of nodesToCheck){
+                    const frontier: Array<SkillNode> = [];
+                    const temp: Set<string> = new Set()
+                    for(const nodeId of desiredNode.out)
+                        temp.add(nodeId)
+                    for(const nodeId of desiredNode.in)
+                        temp.add(nodeId)
+                    const outs = [...temp].map(nodeId => this.skillTreeData.nodes[nodeId]).filter(newNode => newNode.id !== activeNode.id)
+                    frontier.push(...outs)
+
+                    if(desiredNode.nodeGroup === undefined) continue;
+                    const hasBeenFrontier: string[] = []
+                    while(frontier.length > 0){
+                        const frontierNode = frontier.shift();
+                        if(frontierNode === undefined || previouslyRemoved.includes(frontierNode.id)){
+                            continue;
+                        }
+                        const temp: Set<string> = new Set()
+                        for(const nodeId of frontierNode.out)
+                            temp.add(nodeId)
+                        for(const nodeId of frontierNode.in)
+                            temp.add(nodeId)
+                        const outs = [...temp].map(nodeId => this.skillTreeData.nodes[nodeId]).filter(newNode => newNode.id !== activeNode.id && !hasBeenFrontier.includes(newNode.id))
+                        
+                        if(frontierNode && frontierNode.group && frontierNode.group !== desiredNode.group){
+                            foundAlternatePath = true;
+                            frontier.length = 0
+                            break;
+                        }
+                        frontier.push(...outs)
+                        hasBeenFrontier.push(frontierNode.id)
+                    }
+                    if(foundAlternatePath) break;
+                }
+                if(foundAlternatePath) {
+                    this.skillTreeData.removeState(activeNode, SkillNodeStates.Active);
+                    previouslyRemoved.push(activeNode.id);
+                }
+                    
+            }
+        }
+        
+
+
 
         this.skillTreeData.clearState(SkillNodeStates.Hovered);
         this.skillTreeData.clearState(SkillNodeStates.Pathing);
