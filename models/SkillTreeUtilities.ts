@@ -335,6 +335,8 @@ export class SkillTreeUtilities {
             return 0
         });
         
+        
+        const desiredGroupDistances = this.adjustDesiredGroupDistances(desiredNodes.filter(node => node.isNotable), 0.01)
 
         if(desiredNodes.length > 0){
             let count = 0
@@ -347,7 +349,7 @@ export class SkillTreeUtilities {
                 const paths: Array<{ id: string, path: Array<SkillNode> }> = [];
                 for(const node of desiredNodes){
                     const id = node.GetId();
-                    const path = this.getShortestPath(node, debug);
+                    const path = this.getShortestPath(node, debug, desiredGroupDistances);
                     if(path.length > 0)
                         paths.push({id, path})
                 }
@@ -378,7 +380,7 @@ export class SkillTreeUtilities {
                 desiredNodes = desiredNodes.filter(node => !node.is(SkillNodeStates.Active))
                 
                 if(desiredNodes.length === 0){
-                    this.addRoot(startNodes, debug)
+                    this.addRoot(startNodes, debug, desiredGroupDistances)
                 }
             }
         }
@@ -389,7 +391,58 @@ export class SkillTreeUtilities {
         window.location.hash = '#' + this.encodeURL(false);
     }
 
-    private addRoot = (startNodes: Array<SkillNode>, debug: boolean) => {
+    private adjustDesiredGroupDistances = (desiredNodes: Array<SkillNode>, adjustment: number): {[nodeId: string]: number} => {
+        const nodeDistanceWeights: {[nodeId: string]: number} = {}
+
+        function getDistance(x1: number, y1: number, x2: number, y2: number){
+            const x = x2 - x1
+            const y = y2 - y1
+
+            return Math.sqrt(x * x + y * y)
+        }
+
+        for(const node of desiredNodes){
+            const groupId = node.group
+            if(groupId === undefined) continue 
+            const group = this.skillTreeData.groups[groupId]
+            const nodeIds = group.nodes
+            let furthestDistance = 0
+            let totalX = 0, totalY = 0;
+            let masteryType = ''
+            for (const nodeId of nodeIds){
+                const node = this.skillTreeData.nodes[nodeId]
+                if(node.isMastery) masteryType = node.name
+                totalX += node.x;
+                totalY += node.y;
+            }
+            
+            const centerX = totalX / nodeIds.length;
+            const centerY = totalY / nodeIds.length;
+            
+            for (const nodeId of nodeIds){
+                const node = this.skillTreeData.nodes[nodeId]
+                if(node.name === 'Map Drop Duplication' || node.name === 'Adjacent Map Drop Chance') continue
+                
+                const distance = getDistance(centerX, centerY, node.x , node.y)
+                furthestDistance = distance > furthestDistance ? distance : furthestDistance;
+            }
+            const nodesInRange = this.skillTreeData.getNodesInRange(centerX, centerY, furthestDistance * 1.05);
+            for(const node of nodesInRange){
+                let wrongMastery = false
+                if(masteryType != '' && node.group && node.group !== groupId){
+                    for(const newGroupNodeId of this.skillTreeData.groups[node.group].nodes){
+                        const newGroupNode = this.skillTreeData.nodes[newGroupNodeId]
+                        if(newGroupNode.isMastery && newGroupNode.name !== masteryType) wrongMastery = true
+                    }
+                }
+                if(wrongMastery) continue;
+                nodeDistanceWeights[node.id] = 1 - adjustment
+            }
+        }
+        return nodeDistanceWeights
+    }
+
+    private addRoot = (startNodes: Array<SkillNode>, debug: boolean, nodeDistanceWeights: {[nodeId: string]: number}) => {
         if(debug) console.log('Finding root!')
         let closestNode
         let closestNodeDist = 10000
@@ -433,14 +486,14 @@ export class SkillTreeUtilities {
 
             if (rootNodeAllocated) return;
 
-            let path = this.getShortestPath(closestNode, debug)
+            let path = this.getShortestPath(closestNode, debug, nodeDistanceWeights)
             if(debug) console.log('Root path 1 is', path)
             if(debug) console.log(path.length, closestNode)
 
             if(path.length === 0){
                 for (const startNode of startNodes){
                     if(debug) console.log('Checking ' + startNode.id)
-                    const newPath = this.getShortestPath(startNode, debug);
+                    const newPath = this.getShortestPath(startNode, debug, nodeDistanceWeights);
                     if(debug) console.log('New Path', newPath)
                     
                     if(path.length === 0 || (newPath.length < path.length && newPath.length > 0)){
@@ -519,13 +572,13 @@ export class SkillTreeUtilities {
                 }
             }
         }
-        const shortest = this.getShortestPath(node, false);
-        for (const i of shortest) {
-            if (!i.is(SkillNodeStates.Pathing) && !i.is(SkillNodeStates.Active)) {
-                this.skillTreeData.addState(i, SkillNodeStates.Pathing);
-            }
-        }
-        node.hoverText = shortest.length.toString();
+        // const shortest = this.getShortestPath(node, false);
+        // for (const i of shortest) {
+        //     if (!i.is(SkillNodeStates.Pathing) && !i.is(SkillNodeStates.Active)) {
+        //         this.skillTreeData.addState(i, SkillNodeStates.Pathing);
+        //     }
+        // }
+        // node.hoverText = shortest.length.toString();
 
         SkillTreeEvents.fire("skilltree", "hovered-nodes-start", node);
     }
@@ -537,7 +590,7 @@ export class SkillTreeUtilities {
         SkillTreeEvents.fire("skilltree", "hovered-nodes-end", node);
     }
 
-    private getShortestPath = (target: SkillNode, wantDebug: boolean): Array<SkillNode> => {
+    private getShortestPath = (target: SkillNode, wantDebug: boolean, nodeDistanceWeights: {[nodeId: string]: number}): Array<SkillNode> => {
         const numberActive = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).map(node => node.id).length
         //wantDebug = wantDebug && target.id === '5616'
         if (target.is(SkillNodeStates.Active)){
@@ -561,7 +614,7 @@ export class SkillTreeUtilities {
                 continue;
             }
             frontier.push(adjacent[id]);
-            distance[id] = node.classStartIndex ? 0 : 1;
+            distance[id] = node.classStartIndex ? 0 : nodeDistanceWeights[node.id] ? nodeDistanceWeights[node.id] : 1;
         }
 
 
@@ -569,6 +622,18 @@ export class SkillTreeUtilities {
         explored[target.GetId()] = target;
         const prev: { [id: string]: SkillNode } = {};
         while (frontier.length > 0) {
+            frontier.sort((a,b) => {
+                const aPrev = prev[a.id]
+                const bPrev = prev[b.id]
+                if(aPrev === undefined || bPrev === undefined) return 0;
+                const aDist = distance[aPrev.id]
+                const bDist = distance[bPrev.id]
+                if(aDist === undefined || bDist === undefined) return 0;
+
+                if(aDist < bDist) return -1;
+                if(aDist > bDist) return 1;
+                return 0;
+            })
             const current2 = frontier.shift();
             if (current2 === undefined) {
                 if(wantDebug) console.log('Early return 3')
@@ -600,7 +665,7 @@ export class SkillTreeUtilities {
                 }
                 
                 if(wantDebug) console.log('Adding out node to frontier')
-                distance[id] = dist + (out.classStartIndex ? 0 : 1);
+                distance[id] = dist + (out.classStartIndex ? 0 : nodeDistanceWeights[id] ? nodeDistanceWeights[id] : 1);
                 prev[id] = current2;
                 frontier.push(out);
                 if(wantDebug) console.log('New frontier', frontier.map(node => node.GetId()))
