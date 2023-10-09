@@ -117,7 +117,7 @@ export class SkillNode implements ISkillNode {
         this.arc = this.getArc(this.orbitIndex);
         this.x = this.getX(this.arc);
         this.y = this.getY(this.arc);
-        this.isRegular2 = !this.isKeystone && !this.isNotable && !this.isJewelSocket && !this.isMastery;
+        this.isRegular2 = !this.isKeystone && !this.isNotable && !this.isJewelSocket && !this.isMastery && !this.isWormhole;
         this.isRegular1 = this.isRegular2 && (this.grantedStrength > 0 || this.grantedDexterity > 0 || this.grantedIntelligence > 0) && this.stats.filter(utils.NotNullOrWhiteSpace).length === 1;
         this.patch = patch;
 
@@ -253,10 +253,6 @@ export class SkillNode implements ISkillNode {
     }
 
     public GetTargetSize = (): { width: number, height: number } => {
-
-        if (this.isKeystone || this.isWormhole) {
-            return { width: Math.floor(138 * this.scale), height: Math.floor(140 * this.scale) };
-        }
         if (this.isRegular1 || this.isRegular2) {
             return { width: Math.floor(70 * this.scale), height: Math.floor(70 * this.scale) };
         }
@@ -264,7 +260,10 @@ export class SkillNode implements ISkillNode {
         if (this.isNotable || this.isJewelSocket || this.isMastery) {
             return { width: Math.floor(100 * this.scale), height: Math.floor(100 * this.scale) };
         }
-
+        
+        if (this.isKeystone || this.isWormhole) {
+            return { width: Math.floor(138 * this.scale), height: Math.floor(140 * this.scale) };
+        }
 
         return { width: 0, height: 0 };
     }
