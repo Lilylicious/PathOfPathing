@@ -536,6 +536,7 @@ export class SkillTreeUtilities {
                 for (const i of path) {
                     if (!i.is(SkillNodeStates.Active)) {
                         if(debug) console.log('Added', i.id, '(' + i.name + ')')
+                        activeNodes.push(i.id)
                         this.skillTreeData.addState(i, SkillNodeStates.Active);
                     }
                 }
