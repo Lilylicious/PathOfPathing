@@ -301,7 +301,7 @@ export class SkillTreeUtilities {
     }
 
     public allocateNodes = () => {
-        const debug = false
+        const debug = true
         const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && !node.isAscendancyStart)
         for (const node of nodesToDisable){
             this.skillTreeData.removeState(node, SkillNodeStates.Active);
@@ -358,7 +358,18 @@ export class SkillTreeUtilities {
                     if(debug) console.log('No paths found')
                     break;
                 }
+                console.log('Paths', paths.map(path => path.path))
+                // paths.sort((a,b) => {
+                //     const distanceA = this.getDistance(a.path[0].x, a.path[0].y, a.path[1].x , a.path[0].y)
+                //     const distanceB = this.getDistance(b.path[0].x, b.path[0].y, b.path[1].x , b.path[0].y)
+
+                //     if(distanceA < distanceB) return -1;
+                //     if(distanceA > distanceB) return 1;
+                //     return 0;
+                // // })
+                // console.log('Paths post sort 1', paths.map(path => path.path))
                 paths.sort((a,b) => a.path.length - b.path.length)
+                console.log('Paths post sort 2', paths.map(path => path.path))
                 const shortestPath = paths.shift()
                 if (shortestPath === undefined){
                     if(debug) console.log('Shortest path undefined')
@@ -381,116 +392,9 @@ export class SkillTreeUtilities {
                 desiredNodes = desiredNodes.filter(node => !node.is(SkillNodeStates.Active))
                 
                 if(desiredNodes.length === 0){
-                    this.addRoot(startNodes, debug, desiredGroupDistances)
+                    this.addRootIfNeeded(startNodes, debug, desiredGroupDistances)
                 }
             }
-        }
-
-        //This breaks whispers of doom cluster
-        const active = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
-
-        const previouslyRemoved: string[] = []
-        const desiredNodesToRecalc: SkillNode[] = []
-        for (const activeNode of active){
-            if(!activeNode.is(SkillNodeStates.Desired) && activeNode.nodeGroup !== undefined 
-            && activeNode.group !== undefined){
-                const groupNodes = activeNode.nodeGroup.nodes;
-                const nodesToCheck: Array<SkillNode> = []
-                for(const groupNodeId of groupNodes){
-                    const groupNode = this.skillTreeData.nodes[groupNodeId];
-                    if(groupNode.is(SkillNodeStates.Desired)){
-                        nodesToCheck.push(groupNode)
-                    }
-                }
-                if(nodesToCheck.length < 2) {
-                    continue;
-                }
-
-                let foundAlternatePath = false
-                for(const desiredNode of nodesToCheck){
-                    const frontier: Array<SkillNode> = [];
-                    const temp: Set<string> = new Set()
-                    for(const nodeId of desiredNode.out)
-                        temp.add(nodeId)
-                    for(const nodeId of desiredNode.in)
-                        temp.add(nodeId)
-                    const outs = [...temp].map(nodeId => this.skillTreeData.nodes[nodeId])
-                    .filter(newNode => newNode.id !== activeNode.id && !newNode.is(SkillNodeStates.UnDesired))
-                    frontier.push(...outs)
-
-                    const visited: string[] = []
-                    while(frontier.length > 0){
-                        const frontierNode = frontier.shift();
-                        if(frontierNode === undefined || previouslyRemoved.includes(frontierNode.id)){
-                            continue;
-                        }
-                        const temp: Set<string> = new Set()
-                        for(const nodeId of frontierNode.out)
-                            temp.add(nodeId)
-                        for(const nodeId of frontierNode.in)
-                            temp.add(nodeId)
-                        const outs = [...temp].map(nodeId => this.skillTreeData.nodes[nodeId])
-                        .filter(newNode => newNode.id !== activeNode.id 
-                            && !visited.includes(newNode.id)
-                            && !previouslyRemoved.includes(frontierNode.id))
-                        
-                        if(frontierNode && frontierNode.group && frontierNode.group !== desiredNode.group){
-                            foundAlternatePath = true;
-                            desiredNodesToRecalc.push(...nodesToCheck)
-                            frontier.length = 0
-                            break;
-                        }
-                        frontier.push(...outs)
-                        visited.push(frontierNode.id)
-                    }
-                    if(foundAlternatePath) break;
-                }
-                if(foundAlternatePath) {
-                    this.skillTreeData.removeState(activeNode, SkillNodeStates.Active);
-                    previouslyRemoved.push(activeNode.id);
-                }
-            }
-        }
-
-        const newDesireds = [...desiredNodesToRecalc]
-        for(const node of newDesireds){
-            this.skillTreeData.removeState(node, SkillNodeStates.Active);
-        }
-        console.log(newDesireds)
-        while (newDesireds.length > 0){
-            const debug = true
-            const paths: Array<{ id: string, path: Array<SkillNode> }> = [];
-            for(const node of newDesireds){
-                const id = node.GetId();
-                const path = this.getShortestPath(node, debug, desiredGroupDistances);
-                if(path.length > 0)
-                    paths.push({id, path})
-            }
-            if(paths.length == 0){
-                if(debug) console.log('No paths found')
-                break;
-            }
-            paths.sort((a,b) => a.path.length - b.path.length)
-            const shortestPath = paths.shift()
-            if (shortestPath === undefined){
-                if(debug) console.log('Shortest path undefined')
-                return;
-            }
-                
-            const shortestPathNode = this.skillTreeData.nodes[shortestPath.id]
-            if (!shortestPathNode.is(SkillNodeStates.Active)) {
-                if(debug) console.log('Added', shortestPathNode.id, '(' + shortestPathNode.name + ')')
-                this.skillTreeData.addState(shortestPathNode, SkillNodeStates.Active);
-            }
-            
-            for (const i of shortestPath.path) {
-                if (!i.is(SkillNodeStates.Active)) {
-                    if(debug) console.log('Added', i.id, '(' + i.name + ')')
-                    this.skillTreeData.addState(i, SkillNodeStates.Active);
-                }
-            }
-            
-            desiredNodes = desiredNodes.filter(node => !node.is(SkillNodeStates.Active))
         }
 
 
@@ -500,16 +404,18 @@ export class SkillTreeUtilities {
         window.location.hash = '#' + this.encodeURL(false);
     }
 
+    private getDistance(x1: number, y1: number, x2: number, y2: number){
+        const x = x2 - x1
+        const y = y2 - y1
+
+        return Math.sqrt(x * x + y * y)
+    }
+
+
     private adjustDesiredGroupDistances = (desiredNodes: Array<SkillNode>, adjustment: number): {[nodeId: string]: number} => {
         const nodeDistanceWeights: {[nodeId: string]: number} = {}
 
-        function getDistance(x1: number, y1: number, x2: number, y2: number){
-            const x = x2 - x1
-            const y = y2 - y1
-
-            return Math.sqrt(x * x + y * y)
-        }
-
+        
         for(const node of desiredNodes){
             const groupId = node.group
             if(groupId === undefined) continue 
@@ -532,7 +438,7 @@ export class SkillTreeUtilities {
                 const node = this.skillTreeData.nodes[nodeId]
                 if(node.name === 'Map Drop Duplication' || node.name === 'Adjacent Map Drop Chance') continue
                 
-                const distance = getDistance(centerX, centerY, node.x , node.y)
+                const distance = this.getDistance(centerX, centerY, node.x , node.y)
                 furthestDistance = distance > furthestDistance ? distance : furthestDistance;
             }
             const nodesInRange = this.skillTreeData.getNodesInRange(centerX, centerY, furthestDistance * 1.05);
@@ -551,12 +457,100 @@ export class SkillTreeUtilities {
         return nodeDistanceWeights
     }
 
+    //Adds a root for multiple desired nodes in group even if it activates a path
+    // Add array of activated nodes?
+    private addRootIfNeeded = (startNodes: Array<SkillNode>, debug: boolean, nodeDistanceWeights: {[nodeId: string]: number}) => {
+        debug = false
+        if(debug) console.log('Finding needed root!')
+        const desiredNodesUnsorted: SkillNode[] = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired));
+        const activeNodes: string[] = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).map(node => node.id);
+        const startNodeIds: string[] = startNodes.map(node => node.id)
+        let desiredNodes = desiredNodesUnsorted.sort((a,b) => 
+        {
+            let distanceA = 100
+            let distanceB = 100
+
+            for(const node of startNodes){
+                const distA = this.skillTreeData.nodes[a.GetId()].distance[node.GetId()]
+                const distB = this.skillTreeData.nodes[b.GetId()].distance[node.GetId()]
+
+                if(distA === undefined || distB === undefined)
+                    return -1
+
+                distanceA = distA < distanceA ? distA : distanceA;
+                distanceB = distB < distanceB ? distB : distanceB;
+            }
+            if(distanceA < distanceB)    
+                return -1
+            if(distanceA > distanceB)
+                return 1
+
+            return 0
+        });
+
+        for(const desiredNode of desiredNodes){
+            const visited: string[] = [desiredNode.id]
+            const visitedStarts: string[] = []
+            let frontier: string[] = [...desiredNode.out, ...desiredNode.in]
+            frontier = frontier.filter(id => activeNodes.includes(id))
+            
+            let startNodeFound = false
+            while (frontier.length > 0){
+                const frontierId = frontier.shift()
+                if(frontierId === undefined) continue;
+                if(startNodeIds.includes(frontierId)){
+                    startNodeFound = true
+                    break;
+                }
+                visited.push(frontierId)
+
+
+                const frontierNode = this.skillTreeData.nodes[frontierId]
+                frontier.push(...frontierNode.out, ...frontierNode.in)
+                for(const startId of startNodeIds){
+                    if(frontier.includes(startId) && !visitedStarts.includes(startId)){
+                        visitedStarts.push(startId)
+                    }
+                }
+                frontier = frontier.filter(id => activeNodes.includes(id) && !visited.includes(id))
+                if(visitedStarts.length >= startNodeIds.length){
+                    break;
+                }
+            }
+
+            if(!startNodeFound){
+                console.log('Finding shortest path for', desiredNode)
+                const path = this.getShortestPath(desiredNode, debug, nodeDistanceWeights, startNodes.map(node => node.id))
+                console.log(path.map(node => node.id))
+                debug = true
+                if(path.length === 0){
+                    const previousActiveNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && node.ascendancyName === "")
+                    if(debug) console.log('Clearing nodes')
+                    for (const node of previousActiveNodes){
+                        this.skillTreeData.removeState(node, SkillNodeStates.Active);
+                    }
+    
+                    return;
+                }
+    
+                for (const i of path) {
+                    if (!i.is(SkillNodeStates.Active)) {
+                        if(debug) console.log('Added', i.id, '(' + i.name + ')')
+                        this.skillTreeData.addState(i, SkillNodeStates.Active);
+                    }
+                }
+            }
+
+        }
+    }
+
     private addRoot = (startNodes: Array<SkillNode>, debug: boolean, nodeDistanceWeights: {[nodeId: string]: number}) => {
+        debug = true
         if(debug) console.log('Finding root!')
         let closestNode
         let closestNodeDist = 10000
         let alreadyHaveRoot = false
-        for(const node of Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined)){
+        for(const node of Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && !node.isAscendancyStart)){
             for (const startNode of startNodes){
                 if(debug) console.log('Checking ' + node.id + ' against ' + startNode.id)
                 if(node.GetId() === startNode.GetId()) {
@@ -699,11 +693,11 @@ export class SkillTreeUtilities {
         SkillTreeEvents.fire("skilltree", "hovered-nodes-end", node);
     }
 
-    private getShortestPath = (target: SkillNode, wantDebug: boolean, nodeDistanceWeights: {[nodeId: string]: number}): Array<SkillNode> => {
+    private getShortestPath = (target: SkillNode, wantDebug: boolean, nodeDistanceWeights: {[nodeId: string]: number}, toNodes: string[] = []): Array<SkillNode> => {
         const numberActive = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).map(node => node.id).length
-        //wantDebug = wantDebug && target.id === '5616'
+        //wantDebug = true
         if(wantDebug) console.log('Target is', target.id)
-        if (target.is(SkillNodeStates.Active)){
+        if (toNodes.length === 0 && target.is(SkillNodeStates.Active)){
             if(wantDebug) console.log('Early return 1')
             return new Array<SkillNode>;
         }
@@ -722,6 +716,9 @@ export class SkillTreeUtilities {
             }
             if (node.is(SkillNodeStates.UnDesired)){
                 continue;
+            }
+            if ((toNodes.length !== 0 && toNodes.includes(node.id)) || (node.is(SkillNodeStates.Desired) && !node.is(SkillNodeStates.Active))){
+                return [node];
             }
             frontier.push(adjacent[id]);
             distance[id] = node.classStartIndex ? 0 : nodeDistanceWeights[node.id] ? nodeDistanceWeights[node.id] : 1;
@@ -780,7 +777,7 @@ export class SkillTreeUtilities {
                 frontier.push(out);
                 if(wantDebug) console.log('New frontier', frontier.map(node => node.GetId()))
                 if(wantDebug) console.log('Is out active?', out.is(SkillNodeStates.Active))
-                if (out.is(SkillNodeStates.Active || (numberActive === 0 && out.is(SkillNodeStates.Desired))) /*|| startNodes.map(node => node.id).includes(out.id)*/) {
+                if (toNodes.includes(out.id) || (toNodes.length === 0 && (out.is(SkillNodeStates.Active || (numberActive === 0 && out.is(SkillNodeStates.Desired)))))) {
                     frontier.length = 0;
                     foundNode = out;
                     break;
