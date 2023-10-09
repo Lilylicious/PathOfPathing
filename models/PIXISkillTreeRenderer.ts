@@ -75,7 +75,8 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             worldHeight: this.skillTreeData.height * (this.skillTreeData.scale * 1.25),
             events: this.pixi.renderer.events,
             noTicker: true,
-            stopPropagation: true
+            stopPropagation: true,
+            disableOnContextMenu: true
         });
         this.viewport.name = 'viewport';
         this.viewport.drag().wheel({ percent: zoomPercent }).pinch({ percent: zoomPercent * 10 });

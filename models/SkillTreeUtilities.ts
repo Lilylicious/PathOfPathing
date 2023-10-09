@@ -21,6 +21,7 @@ export class SkillTreeUtilities {
         this.skillTreeCodec = new SkillTreeCodec();
 
         SkillTreeEvents.on("node", "click", this.click);
+        SkillTreeEvents.on("node", "rightclick", this.rightclick);
         SkillTreeEvents.on("node", "tap", this.click);
         SkillTreeEvents.on("node", "mouseover", this.mouseover);
         SkillTreeEvents.on("node", "mouseout", this.mouseout);
@@ -299,6 +300,46 @@ export class SkillTreeUtilities {
         this.allocateNodes();
     }
 
+    private rightclick = (node: SkillNode) => {
+
+        if (this.skillTreeData.tree === "Atlas" && node.isMastery) {
+            let groups: Array<number> = []
+            for (const id in this.skillTreeData.nodes) {
+                const other = this.skillTreeData.nodes[id];
+                if (!other.isMastery) {
+                    continue;
+                }
+
+                if (other.name !== node.name) {
+                    continue;
+                }
+
+                if (other.group === undefined) {
+                    continue;
+                }
+
+                if(!groups.includes(other.group)){
+                    groups.push(other.group)
+                }
+            }
+            for(const groupId of groups){
+                for(const nodeId of this.skillTreeData.groups[groupId].nodes){
+                    const node = this.skillTreeData.nodes[nodeId]
+                    if(node.isNotable){                        
+                        this.skillTreeData.removeState(node, SkillNodeStates.Desired);
+                        this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
+                    }
+                }
+            }
+        }
+        else{
+            this.skillTreeData.removeState(node, SkillNodeStates.Desired);
+            this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
+        }
+        this.allocateNodes();
+        SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
+    }
+
     public allocateNodes = () => {
         const debug = false
         const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && !node.isAscendancyStart)
@@ -380,7 +421,7 @@ export class SkillTreeUtilities {
                 desiredNodes = desiredNodes.filter(node => !node.is(SkillNodeStates.Active))
                 
                 if(desiredNodes.length === 0){
-                    this.addRoot(startNodes, debug, desiredGroupDistances)
+                    //this.addRoot(startNodes, debug, desiredGroupDistances)
                 }
             }
         }
@@ -447,7 +488,7 @@ export class SkillTreeUtilities {
         let closestNode
         let closestNodeDist = 10000
         let alreadyHaveRoot = false
-        for(const node of Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined)){
+        for(const node of Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined  && !node.isAscendancyStart)){
             for (const startNode of startNodes){
                 if(debug) console.log('Checking ' + node.id + ' against ' + startNode.id)
                 if(node.GetId() === startNode.GetId()) {
@@ -517,10 +558,10 @@ export class SkillTreeUtilities {
                 return;
             }
 
-            if (!closestNode.is(SkillNodeStates.Active)) {
-                if(debug) console.log('Added', closestNode.id, '(' + closestNode.name + ')')
-                this.skillTreeData.addState(closestNode, SkillNodeStates.Active);
-            }
+            // if (!closestNode.is(SkillNodeStates.Active)) {
+            //     if(debug) console.log('Added', closestNode.id, '(' + closestNode.name + ')')
+            //     this.skillTreeData.addState(closestNode, SkillNodeStates.Active);
+            // }
 
             for (const i of path) {
                 if (!i.is(SkillNodeStates.Active)) {
@@ -572,13 +613,7 @@ export class SkillTreeUtilities {
                 }
             }
         }
-        // const shortest = this.getShortestPath(node, false);
-        // for (const i of shortest) {
-        //     if (!i.is(SkillNodeStates.Pathing) && !i.is(SkillNodeStates.Active)) {
-        //         this.skillTreeData.addState(i, SkillNodeStates.Pathing);
-        //     }
-        // }
-        // node.hoverText = shortest.length.toString();
+        //console.log(this.adjustDesiredGroupDistances([node], 0.01))
 
         SkillTreeEvents.fire("skilltree", "hovered-nodes-start", node);
     }
@@ -592,7 +627,7 @@ export class SkillTreeUtilities {
 
     private getShortestPath = (target: SkillNode, wantDebug: boolean, nodeDistanceWeights: {[nodeId: string]: number}): Array<SkillNode> => {
         const numberActive = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).map(node => node.id).length
-        //wantDebug = wantDebug && target.id === '5616'
+        //wantDebug = true
         if (target.is(SkillNodeStates.Active)){
             if(wantDebug) console.log('Early return 1')
             return new Array<SkillNode>;
@@ -602,22 +637,9 @@ export class SkillTreeUtilities {
             return new Array<SkillNode>(target);
         }
         let foundNode: SkillNode = target;
-        const frontier: Array<SkillNode> = [];
+        const frontier: Array<SkillNode> = [target];
         const distance: { [id: string]: number } = {};
-        const adjacent = this.getAdjacentNodes([target.GetId()]);
-        for (const id in adjacent) {
-            const node = adjacent[id];
-            if ((node.classStartIndex !== undefined || node.isAscendancyStart) && !node.is(SkillNodeStates.Active)) {
-                continue;
-            }
-            if (node.is(SkillNodeStates.UnDesired)){
-                continue;
-            }
-            frontier.push(adjacent[id]);
-            distance[id] = node.classStartIndex ? 0 : nodeDistanceWeights[node.id] ? nodeDistanceWeights[node.id] : 1;
-        }
-
-
+        distance[target.id] = 0
         const explored: { [id: string]: SkillNode } = {};
         explored[target.GetId()] = target;
         const prev: { [id: string]: SkillNode } = {};
@@ -644,7 +666,15 @@ export class SkillTreeUtilities {
             explored[current2.GetId()] = current2;
             const dist = distance[current2.GetId()];
             let count = 0
-            let adjacent = current2.out.length > 0 ? current2.out : current2.in
+            let adjacent = [...new Set([...current2.out, ...current2.in])]
+            adjacent.sort((a,b) =>{
+                const nodeA = this.skillTreeData.nodes[a].isNotable
+                const nodeB = this.skillTreeData.nodes[b].isNotable
+
+                if(nodeA && !nodeB) return -1;
+                if(!nodeA && nodeB) return 1;
+                return 0;
+            });
             for (const id of adjacent) {
                 if(++count > 20) break;
                 if(wantDebug) console.log('Current out ID', id)
@@ -653,7 +683,10 @@ export class SkillTreeUtilities {
                     || (current2.ascendancyName !== "" && out.ascendancyName === "" && !current2.is(SkillNodeStates.Active))) {
                     continue;
                 }
-                if (explored[id] || distance[id]) {
+                
+                let newDist = dist + (out.classStartIndex || out.is(SkillNodeStates.Desired) ? 0 : nodeDistanceWeights[id] ? nodeDistanceWeights[id] : 1);
+                
+                if (explored[id] || (distance[id] && distance[id] < newDist)) {
                     continue;
                 }
                 if ((out.classStartIndex !== undefined || out.isAscendancyStart) && !out.is(SkillNodeStates.Active)) {
@@ -664,10 +697,11 @@ export class SkillTreeUtilities {
                     continue;
                 }
                 
-                if(wantDebug) console.log('Adding out node to frontier')
-                distance[id] = dist + (out.classStartIndex ? 0 : nodeDistanceWeights[id] ? nodeDistanceWeights[id] : 1);
+                if(wantDebug && !out.isMastery) console.log('Adding out node to frontier')
+                distance[id] = newDist;
+                if(wantDebug) console.log('Distance to out node', distance[id])
                 prev[id] = current2;
-                frontier.push(out);
+                if(!out.isMastery) frontier.push(out);
                 if(wantDebug) console.log('New frontier', frontier.map(node => node.GetId()))
                 if(wantDebug) console.log('Is out active?', out.is(SkillNodeStates.Active))
                 if (out.is(SkillNodeStates.Active || (numberActive === 0 && out.is(SkillNodeStates.Desired))) /*|| startNodes.map(node => node.id).includes(out.id)*/) {
