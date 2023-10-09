@@ -253,15 +253,15 @@ export class SkillNode implements ISkillNode {
     }
 
     public GetTargetSize = (): { width: number, height: number } => {
-        if (this.isRegular1 || this.isRegular2) {
+        if (!this.isWormhole && (this.isRegular1 || this.isRegular2)) {
             return { width: Math.floor(70 * this.scale), height: Math.floor(70 * this.scale) };
         }
 
-        if (this.isNotable || this.isJewelSocket || this.isMastery) {
+        if (!this.isWormhole && (this.isNotable || this.isJewelSocket || this.isMastery)) {
             return { width: Math.floor(100 * this.scale), height: Math.floor(100 * this.scale) };
         }
 
-        if (this.isKeystone) {
+        if (this.isKeystone || this.isWormhole) {
             return { width: Math.floor(138 * this.scale), height: Math.floor(140 * this.scale) };
         }
 
