@@ -140,7 +140,7 @@ export class SkillTreeUtilities {
             this.skillTreeData.addState(node, SkillNodeStates.Active);
             SkillTreeEvents.fire("skilltree", "class-change", node);
         }
-        this.changeAscendancyClass(0, false);
+        this.changeAscendancyClass(0, false, true);
         this.allocateNodes();
 
         if (encode) {
@@ -148,8 +148,8 @@ export class SkillTreeUtilities {
         }        
     }
 
-    public changeAscendancyClass = (start: number, encode = true) => {
-        SkillTreeEvents.fire("skilltree", "ascendancy-class-change");
+    public changeAscendancyClass = (start: number, encode = true, newStart = false) => {
+        if(newStart) SkillTreeEvents.fire("skilltree", "ascendancy-class-change");
         if (this.skillTreeData.classes.length === 0) {
             return;
         }
