@@ -1,4 +1,4 @@
-﻿import '../content/app.css';
+import '../content/app.css';
 
 import { SkillTreeData } from "../models/SkillTreeData";
 import { SkillTreeEvents } from "../models/SkillTreeEvents";
@@ -37,13 +37,13 @@ export class App {
             }
 
             if (i === versionCompare) {
-                this.skillTreeDataCompare = data;
+                this.skillTreeDataCompare = undefined;
             }
         }
         this.skillTreeUtilities = new SkillTreeUtilities(this.skillTreeData, this.skillTreeDataCompare);
 
         const versionSelect = document.getElementById("skillTreeControl_Version") as HTMLSelectElement;
-        const compareSelect = document.getElementById("skillTreeControl_VersionCompare") as HTMLSelectElement;
+        //const compareSelect = document.getElementById("skillTreeControl_VersionCompare") as HTMLSelectElement;
         for (const ver of versionJson.versions) {
             const v = document.createElement("option");
             v.text = v.value = ver;
@@ -57,8 +57,12 @@ export class App {
             if (ver === versionCompare) {
                 c.setAttribute('selected', 'selected');
             }
-            compareSelect.appendChild(c);
+            //compareSelect.appendChild(c);
         }
+        versionSelect.onchange = () => {
+            const version = versionSelect.value !== '0' ? versionSelect.value : '';
+            App.ChangeSkillTreeVersion(version, "", "");
+        };
 
         const controls = document.getElementsByClassName("skillTreeVersions") as HTMLCollectionOf<HTMLDivElement>;
         for (const i in controls) {
@@ -67,12 +71,12 @@ export class App {
             }
         }
 
-        const go = document.getElementById("skillTreeControl_VersionGo") as HTMLButtonElement;
-        go.addEventListener("click", () => {
-            const version = versionSelect.value !== '0' ? versionSelect.value : '';
-            const compare = compareSelect.value !== '0' ? compareSelect.value : '';
-            App.ChangeSkillTreeVersion(version, compare, "");
-        });
+        // const go = document.getElementById("skillTreeControl_VersionGo") as HTMLButtonElement;
+        // go.addEventListener("click", () => {
+        //     const version = versionSelect.value !== '0' ? versionSelect.value : '';
+        //     const compare = compareSelect.value !== '0' ? compareSelect.value : '';
+        //     App.ChangeSkillTreeVersion(version, compare, "");
+        // });
 
 
         const reset = document.getElementById("skillTreeControl_Reset") as HTMLButtonElement;
@@ -596,6 +600,13 @@ export class App {
 
         if (window.location.search !== search) {
             window.location.search = search;
+        }
+        
+        const classControl = document.getElementById("skillTreeControl_Class") as HTMLSelectElement
+        if(version.slice(-5) === 'atlas'){
+            classControl.style.visibility = 'hidden'
+        } else {
+            classControl.style.visibility = 'visible'
         }
     }
 }
