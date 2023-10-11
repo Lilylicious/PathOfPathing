@@ -45,7 +45,10 @@ export class SkillTreeUtilities {
     }
 
     private lastHash = "";
-    public decodeURL = (allocated: boolean) => {
+    public decodeURL = () => {
+        if(window.location.hash === ""){
+            this.changeStartClass(3, false);
+        }
         if (this.lastHash === window.location.hash) {
             return;
         }
