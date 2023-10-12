@@ -3,8 +3,8 @@ import { SkillNode, SkillNodeStates } from "./SkillNode";
 import { SkillTreeEvents } from "./SkillTreeEvents";
 import * as PIXI from "pixi.js";
 import { SkillTreeCodec } from "./url-processing/SkillTreeCodec";
-import { sleep } from "bun";
-import { beforeAll } from "bun:test";
+import { ShortestPathAlgorithm } from "./algorithms/ShortestPathAlgorithm"
+import { AllocateNodesAlgorithm } from "./algorithms/AllocateNodesAlgorithm"
 
 export class SkillTreeUtilities {
     private dragStart: PIXI.Point;
@@ -14,11 +14,17 @@ export class SkillTreeUtilities {
     skillTreeData: SkillTreeData;
     skillTreeDataCompare: SkillTreeData | undefined;
     skillTreeCodec: SkillTreeCodec;
+    
+    shortestPath: ShortestPathAlgorithm;
+    allocationAlgorithm: AllocateNodesAlgorithm;
 
     constructor(context: SkillTreeData, contextComapre: SkillTreeData | undefined) {
         this.skillTreeData = context;
         this.skillTreeDataCompare = contextComapre;
         this.skillTreeCodec = new SkillTreeCodec();
+
+        this.shortestPath = new ShortestPathAlgorithm();
+        this.allocationAlgorithm = new AllocateNodesAlgorithm(this.skillTreeData);
 
         SkillTreeEvents.on("node", "click", this.click);
         SkillTreeEvents.on("node", "rightclick", this.rightclick);
@@ -318,236 +324,12 @@ export class SkillTreeUtilities {
     }
 
     public allocateNodes = () => {
-        const debug = false
-        const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && !node.isAscendancyStart)
-        for (const node of nodesToDisable){
-            this.skillTreeData.removeState(node, SkillNodeStates.Active);
-        }
-        
-        const startNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
-        .filter(node => node.classStartIndex !== undefined)[0].out
-        .filter(nodeId => this.skillTreeData.nodes[nodeId].isAscendancyStart === false)
-        .map(nodeId => this.skillTreeData.nodes[nodeId])
-        .filter(node => !node.is(SkillNodeStates.UnDesired));
-        const desiredNodesUnsorted = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired))
-        let desiredNodes = desiredNodesUnsorted.sort((b,a) => 
-        {
-            let distanceA = 100
-            let distanceB = 100
-
-            for(const node of startNodes){
-                const distA = this.skillTreeData.nodes[a.GetId()].distance[node.GetId()]
-                const distB = this.skillTreeData.nodes[b.GetId()].distance[node.GetId()]
-
-                if(distA === undefined || distB === undefined)
-                    return -1
-
-                distanceA = distA < distanceA ? distA : distanceA;
-                distanceB = distB < distanceB ? distB : distanceB;
-            }
-            if(distanceA < distanceB)    
-                return -1
-            if(distanceA > distanceB)
-                return 1
-
-            return 0
-        });
-        
-        
-        const desiredGroupDistances = this.adjustDesiredGroupDistances(desiredNodes.filter(node => node.isNotable), 0.01)
-
-        if(desiredNodes.length > 0){
-            let count = 0
-            while (desiredNodes.length > 0){
-                if(++count > 100){
-                    console.log('Infinite loop detection triggered. Please report this as a bug.')
-                    break;
-                }
-
-                const paths: Array<{ id: string, path: Array<SkillNode> }> = [];
-                for(const node of desiredNodes){
-                    const id = node.GetId();
-                    const path = this.getShortestPath(node, debug, desiredGroupDistances);
-                    if(path.length > 0)
-                        paths.push({id, path})
-                }
-                if(paths.length == 0){
-                    if(debug) console.log('No paths found')
-                    break;
-                }
-                paths.sort((a,b) => a.path.length - b.path.length)
-                const shortestPath = paths.shift()
-                if (shortestPath === undefined){
-                    if(debug) console.log('Shortest path undefined')
-                    return;
-                }
-                    
-                const shortestPathNode = this.skillTreeData.nodes[shortestPath.id]
-                if (!shortestPathNode.is(SkillNodeStates.Active)) {
-                    if(debug) console.log('Added', shortestPathNode.id, '(' + shortestPathNode.name + ')')
-                    this.skillTreeData.addState(shortestPathNode, SkillNodeStates.Active);
-                }
-                
-                for (const i of shortestPath.path) {
-                    if (!i.is(SkillNodeStates.Active)) {
-                        if(debug) console.log('Added', i.id, '(' + i.name + ')')
-                        this.skillTreeData.addState(i, SkillNodeStates.Active);
-                    }
-                }
-
-                desiredNodes = desiredNodes.filter(node => !node.is(SkillNodeStates.Active))
-                
-                if(desiredNodes.length === 0){
-                    //this.addRoot(startNodes, debug, desiredGroupDistances)
-                }
-            }
-        }
+        this.allocationAlgorithm.Execute(this.shortestPath);
 
         this.skillTreeData.clearState(SkillNodeStates.Hovered);
         this.skillTreeData.clearState(SkillNodeStates.Pathing);
         this.skillTreeDataCompare?.clearState(SkillNodeStates.Hovered);
         window.location.hash = '#' + this.encodeURL(false);
-    }
-
-    private adjustDesiredGroupDistances = (desiredNodes: Array<SkillNode>, adjustment: number): {[nodeId: string]: number} => {
-        const nodeDistanceWeights: {[nodeId: string]: number} = {}
-
-        function getDistance(x1: number, y1: number, x2: number, y2: number){
-            const x = x2 - x1
-            const y = y2 - y1
-
-            return Math.sqrt(x * x + y * y)
-        }
-
-        for(const node of desiredNodes){
-            const groupId = node.group
-            if(groupId === undefined) continue 
-            const group = this.skillTreeData.groups[groupId]
-            const nodeIds = group.nodes
-            let furthestDistance = 0
-            let totalX = 0, totalY = 0;
-            let masteryType = ''
-            for (const nodeId of nodeIds){
-                const node = this.skillTreeData.nodes[nodeId]
-                if(node.isMastery) masteryType = node.name
-                totalX += node.x;
-                totalY += node.y;
-            }
-            
-            const centerX = totalX / nodeIds.length;
-            const centerY = totalY / nodeIds.length;
-            
-            for (const nodeId of nodeIds){
-                const node = this.skillTreeData.nodes[nodeId]
-                if(node.name === 'Map Drop Duplication' || node.name === 'Adjacent Map Drop Chance') continue
-                
-                const distance = getDistance(centerX, centerY, node.x , node.y)
-                furthestDistance = distance > furthestDistance ? distance : furthestDistance;
-            }
-            const nodesInRange = this.skillTreeData.getNodesInRange(centerX, centerY, furthestDistance * 1.05);
-            for(const node of nodesInRange){
-                let wrongMastery = false
-                if(masteryType != '' && node.group && node.group !== groupId){
-                    for(const newGroupNodeId of this.skillTreeData.groups[node.group].nodes){
-                        const newGroupNode = this.skillTreeData.nodes[newGroupNodeId]
-                        if(newGroupNode.isMastery && newGroupNode.name !== masteryType) wrongMastery = true
-                    }
-                }
-                if(wrongMastery) continue;
-                nodeDistanceWeights[node.id] = 1 - adjustment
-            }
-        }
-        return nodeDistanceWeights
-    }
-
-    private addRoot = (startNodes: Array<SkillNode>, debug: boolean, nodeDistanceWeights: {[nodeId: string]: number}) => {
-        if(debug) console.log('Finding root!')
-        let closestNode
-        let closestNodeDist = 10000
-        let alreadyHaveRoot = false
-        for(const node of Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined  && !node.isAscendancyStart)){
-            for (const startNode of startNodes){
-                if(debug) console.log('Checking ' + node.id + ' against ' + startNode.id)
-                if(node.GetId() === startNode.GetId()) {
-                    alreadyHaveRoot = true;
-                    if(debug) console.log('Already have root')
-                    break;
-                }
-                const dist = this.skillTreeData.nodes[node.GetId()].distance[startNode.GetId()]
-                if(debug) console.log('For node ' + node.name + ' the distance to ' + startNode.name + ' is ' + dist)
-                if(dist < closestNodeDist){
-                    
-                    closestNode = startNode;
-                    closestNodeDist = dist;
-                }
-            }
-            if (alreadyHaveRoot){
-                if(debug)console.log('Already have root')
-                break;
-            } 
-        }
-        
-        if(closestNode !== undefined && !alreadyHaveRoot){
-            let rootNodeAllocated = false;
-            for (const startNode of startNodes){
-                const outNodes = startNode.out.map(n => this.skillTreeData.nodes[n]).filter(node => node.ascendancyName === "" && node.classStartIndex === undefined)
-
-                for(const node of outNodes){
-                    if(node.is(SkillNodeStates.Active)){
-                        if(debug) console.log('Added', startNode.id, '(' + startNode.name + ')')
-                        this.skillTreeData.addState(startNode, SkillNodeStates.Active);
-                        if(debug) console.log('Allocated root node')
-                        rootNodeAllocated = true;
-                    }
-                }
-            }
-
-            if (rootNodeAllocated) return;
-
-            let path = this.getShortestPath(closestNode, debug, nodeDistanceWeights)
-            if(debug) console.log('Root path 1 is', path)
-            if(debug) console.log(path.length, closestNode)
-
-            if(path.length === 0){
-                for (const startNode of startNodes){
-                    if(debug) console.log('Checking ' + startNode.id)
-                    const newPath = this.getShortestPath(startNode, debug, nodeDistanceWeights);
-                    if(debug) console.log('New Path', newPath)
-                    
-                    if(path.length === 0 || (newPath.length < path.length && newPath.length > 0)){
-                        if(debug) console.log('path, newPath', path.length, newPath.length)
-                        closestNode = startNode;
-                        path = newPath;
-                        if(debug) console.log('Replacing path',path.length, closestNode)
-                    }
-                }
-            }
-
-            if(debug) console.log('Root path 2 is', path)
-
-            if(path.length === 0){
-                const previousActiveNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && node.ascendancyName === "")
-                if(debug) console.log('Clearing nodes')
-                for (const node of previousActiveNodes){
-                    this.skillTreeData.removeState(node, SkillNodeStates.Active);
-                }
-
-                return;
-            }
-
-            // if (!closestNode.is(SkillNodeStates.Active)) {
-            //     if(debug) console.log('Added', closestNode.id, '(' + closestNode.name + ')')
-            //     this.skillTreeData.addState(closestNode, SkillNodeStates.Active);
-            // }
-
-            for (const i of path) {
-                if (!i.is(SkillNodeStates.Active)) {
-                    if(debug) console.log('Added', i.id, '(' + i.name + ')')
-                    this.skillTreeData.addState(i, SkillNodeStates.Active);
-                }
-            }
-        }
-        
     }
 
     private touchTimeout: Timer | null = null;
@@ -600,120 +382,5 @@ export class SkillTreeUtilities {
         this.skillTreeData.clearState(SkillNodeStates.Pathing);
         this.skillTreeDataCompare?.clearState(SkillNodeStates.Hovered);
         SkillTreeEvents.fire("skilltree", "hovered-nodes-end", node);
-    }
-
-    private getShortestPath = (target: SkillNode, wantDebug: boolean, nodeDistanceWeights: {[nodeId: string]: number}): Array<SkillNode> => {
-        const numberActive = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).map(node => node.id).length
-        //wantDebug = true
-        if (target.is(SkillNodeStates.Active)){
-            if(wantDebug) console.log('Early return 1')
-            return new Array<SkillNode>;
-        }
-        if (target.isBlighted) {
-            if(wantDebug) console.log('Early return 2')
-            return new Array<SkillNode>(target);
-        }
-        let foundNode: SkillNode = target;
-        const frontier: Array<SkillNode> = [target];
-        const distance: { [id: string]: number } = {};
-        distance[target.id] = 0
-        const explored: { [id: string]: SkillNode } = {};
-        explored[target.GetId()] = target;
-        const prev: { [id: string]: SkillNode } = {};
-        while (frontier.length > 0) {
-            frontier.sort((a,b) => {
-                const aPrev = prev[a.id]
-                const bPrev = prev[b.id]
-                if(aPrev === undefined || bPrev === undefined) return 0;
-                const aDist = distance[aPrev.id]
-                const bDist = distance[bPrev.id]
-                if(aDist === undefined || bDist === undefined) return 0;
-
-                if(aDist < bDist) return -1;
-                if(aDist > bDist) return 1;
-                return 0;
-            })
-            const current2 = frontier.shift();
-            if (current2 === undefined) {
-                if(wantDebug) console.log('Early return 3')
-                break;
-            }
-            if(wantDebug) console.log('Current frontier ID', current2.GetId())
-
-            explored[current2.GetId()] = current2;
-            const dist = distance[current2.GetId()];
-            let count = 0
-            let adjacent = [...new Set([...current2.out, ...current2.in])]
-            adjacent.sort((a,b) =>{
-                const nodeA = this.skillTreeData.nodes[a].isNotable
-                const nodeB = this.skillTreeData.nodes[b].isNotable
-
-                if(nodeA && !nodeB) return -1;
-                if(!nodeA && nodeB) return 1;
-                return 0;
-            });
-            for (const id of adjacent) {
-                if(++count > 20) break;
-                if(wantDebug) console.log('Current out ID', id)
-                const out = this.skillTreeData.nodes[id];
-                if ((current2.ascendancyName === "" && out.ascendancyName !== "" && !out.is(SkillNodeStates.Active))
-                    || (current2.ascendancyName !== "" && out.ascendancyName === "" && !current2.is(SkillNodeStates.Active))) {
-                    continue;
-                }
-                
-                let newDist = dist + (out.classStartIndex || out.is(SkillNodeStates.Desired) ? 0 : nodeDistanceWeights[id] ? nodeDistanceWeights[id] : 1);
-                
-                if (explored[id] || (distance[id] && distance[id] < newDist)) {
-                    continue;
-                }
-                if ((out.classStartIndex !== undefined || out.isAscendancyStart) && !out.is(SkillNodeStates.Active)) {
-                    continue;
-                }
-                
-                if (out.is(SkillNodeStates.UnDesired)) {
-                    continue;
-                }
-                
-                if(wantDebug && !out.isMastery) console.log('Adding out node to frontier')
-                distance[id] = newDist;
-                if(wantDebug) console.log('Distance to out node', distance[id])
-                prev[id] = current2;
-                if(!out.isMastery) frontier.push(out);
-                if(wantDebug) console.log('New frontier', frontier.map(node => node.GetId()))
-                if(wantDebug) console.log('Is out active?', out.is(SkillNodeStates.Active))
-                if (out.is(SkillNodeStates.Active || (numberActive === 0 && out.is(SkillNodeStates.Desired))) /*|| startNodes.map(node => node.id).includes(out.id)*/) {
-                    frontier.length = 0;
-                    foundNode = out;
-                    break;
-                }
-            }
-        }
-
-        if(wantDebug) console.log('Found node', foundNode, foundNode === target, distance[foundNode.GetId()])
-        if (foundNode === target || distance[foundNode.GetId()] === undefined) {
-            return new Array<SkillNode>();
-        }
-        let current: SkillNode | undefined = foundNode;
-        const path = new Array<SkillNode>();
-        while (current !== undefined) {
-            path.push(current);
-            current = prev[current.GetId()];
-        }
-        return path.reverse();
-    }
-
-    private getAdjacentNodes = (nodeIds: Array<string>) => {
-        const adjacentNodes: { [id: string]: SkillNode } = {};
-        for (const parentId of nodeIds) {
-            const adjancent = this.skillTreeData.nodes[parentId].out.length > 0 ? this.skillTreeData.nodes[parentId].out : this.skillTreeData.nodes[parentId].in;
-            for (const id of adjancent) {
-                const out = this.skillTreeData.nodes[id];
-                if (out.classStartIndex !== undefined && !out.is(SkillNodeStates.Active)) {
-                    continue;
-                }
-                adjacentNodes[id] = out;
-            }
-        }
-        return adjacentNodes;
     }
 }
