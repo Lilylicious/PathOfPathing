@@ -140,10 +140,12 @@ export class SkillTreeUtilities {
 
             if (node.classStartIndex !== start) {
                 this.skillTreeData.removeState(node, SkillNodeStates.Active);
+                this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                 continue;
             }
 
             this.skillTreeData.addState(node, SkillNodeStates.Active);
+            this.skillTreeData.addState(node, SkillNodeStates.Desired);
             SkillTreeEvents.fire("skilltree", "class-change", node);
         }
         this.changeAscendancyClass(0, false, true);
@@ -177,6 +179,7 @@ export class SkillTreeUtilities {
             }
             if (node.isAscendancyStart) {
                 this.skillTreeData.addState(node, SkillNodeStates.Active);
+                this.skillTreeData.addState(node, SkillNodeStates.Desired);
                 SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
             }
         }
@@ -206,6 +209,7 @@ export class SkillTreeUtilities {
     }
 
     private click = (node: SkillNode) => {
+        //this.skillTreeData.clearState(SkillNodeStates.Highlighted)
         if (node.is(SkillNodeStates.Compared)) {
             return;
         }
@@ -284,7 +288,7 @@ export class SkillTreeUtilities {
     }
 
     private rightclick = (node: SkillNode) => {
-
+        //this.skillTreeData.clearState(SkillNodeStates.Highlighted)
         if (this.skillTreeData.tree === "Atlas" && node.isMastery) {
             let groups: Array<number> = []
             for (const id in this.skillTreeData.nodes) {
@@ -324,7 +328,9 @@ export class SkillTreeUtilities {
     }
 
     public allocateNodes = () => {
+        //console.time('Execution time')
         this.allocationAlgorithm.Execute(this.shortestPath);
+        //console.timeEnd('Execution time')
 
         this.skillTreeData.clearState(SkillNodeStates.Hovered);
         this.skillTreeData.clearState(SkillNodeStates.Pathing);

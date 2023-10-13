@@ -17,6 +17,10 @@ export class SkillTreeData implements ISkillTreeData {
     min_y: number;
     max_x: number;
     max_y: number;
+    desired_min_x: number;
+    desired_min_y: number;
+    desired_max_x: number;
+    desired_max_y: number;
     imageZoomLevels: Array<number>;
     sprites: { [id: string]: { [zoomLevel: string]: ISpriteSheet } };
     constants: Constants;
@@ -56,6 +60,10 @@ export class SkillTreeData implements ISkillTreeData {
         this.max_x = skillTree.max_x;
         this.min_y = skillTree.min_y;
         this.max_y = skillTree.max_y;
+        this.desired_min_x = 100000;
+        this.desired_max_x = -100000;
+        this.desired_min_y = 100000;
+        this.desired_max_y = -100000;
         this.imageZoomLevels = skillTree.imageZoomLevels;
         this.constants = new Constants(skillTree.constants);
         this.points = skillTree.points || { totalPoints: 121, ascendancyPoints: 8 };
@@ -165,6 +173,7 @@ export class SkillTreeData implements ISkillTreeData {
 
             if (node.classStartIndex === 3) {
                 this.addState(node, SkillNodeStates.Active);
+                this.addState(node, SkillNodeStates.Desired);
             }
 
             if (node.ascendancyName !== "") {
@@ -217,6 +226,7 @@ export class SkillTreeData implements ISkillTreeData {
 
         for (const id in this.classStartNodes) {
             this.addState(this.nodes[id], SkillNodeStates.Active);
+            this.addState(this.nodes[id], SkillNodeStates.Desired);
             return this.nodes[id].classStartIndex || 0;
         }
 
@@ -328,6 +338,14 @@ export class SkillTreeData implements ISkillTreeData {
             return;
         }
 
+        if(state === SkillNodeStates.Desired){
+            this.desired_min_x = this.nodes[id].x < this.desired_min_x ? this.nodes[id].x : this.desired_min_x;
+            this.desired_min_y = this.nodes[id].y < this.desired_min_y ? this.nodes[id].y : this.desired_min_y;
+            
+            this.desired_max_x = this.nodes[id].x > this.desired_max_x ? this.nodes[id].x : this.desired_max_x;
+            this.desired_max_y = this.nodes[id].y > this.desired_max_y ? this.nodes[id].y : this.desired_max_y;
+        }
+
         this.nodes[id]._add(state);
         this.nodesInState[state].push(id);
     }
@@ -344,6 +362,23 @@ export class SkillTreeData implements ISkillTreeData {
 
         this.nodes[id]._remove(state);
         this.nodesInState[state].splice(this.nodesInState[state].indexOf(id), 1);
+
+
+
+        if(state === SkillNodeStates.Desired){
+                    
+            this.desired_min_x = 100000;
+            this.desired_max_x = -100000;
+            this.desired_min_y = 100000;
+            this.desired_max_y = -100000;
+            for(const desiredNode of Object.values(this.getNodes(state))){
+                this.desired_min_x = desiredNode.x < this.desired_min_x ? desiredNode.x : this.desired_min_x;
+                this.desired_min_y = desiredNode.y < this.desired_min_y ? desiredNode.y : this.desired_min_y;
+                
+                this.desired_max_x = desiredNode.x > this.desired_max_x ? desiredNode.x : this.desired_max_x;
+                this.desired_max_y = desiredNode.y > this.desired_max_y ? desiredNode.y : this.desired_max_y;
+            }
+        }        
     }
 
     public clearState = (state: SkillNodeStates) => {
