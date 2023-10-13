@@ -17,35 +17,9 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
         for (const node of nodesToDisable){
             this.skillTreeData.removeState(node, SkillNodeStates.Active);
         }
-        
-        const startNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
-        .filter(node => node.classStartIndex !== undefined)[0]?.out
-        .filter(nodeId => this.skillTreeData.nodes[nodeId].isAscendancyStart === false)
-        .map(nodeId => this.skillTreeData.nodes[nodeId])
-        .filter(node => !node.is(SkillNodeStates.UnDesired));
+
         const desiredNodesUnsorted = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired))
-        let desiredNodes = desiredNodesUnsorted.sort((b,a) => 
-        {
-            let distanceA = 100
-            let distanceB = 100
-
-            for(const node of startNodes){
-                const distA = this.skillTreeData.nodes[a.GetId()].distance[node.GetId()]
-                const distB = this.skillTreeData.nodes[b.GetId()].distance[node.GetId()]
-
-                if(distA === undefined || distB === undefined)
-                    return -1
-
-                distanceA = distA < distanceA ? distA : distanceA;
-                distanceB = distB < distanceB ? distB : distanceB;
-            }
-            if(distanceA < distanceB)    
-                return -1
-            if(distanceA > distanceB)
-                return 1
-
-            return 0
-        });
+        let desiredNodes = desiredNodesUnsorted
         
         
         const desiredGroupDistances = this.adjustDesiredGroupDistances(desiredNodes.filter(node => node.isNotable), 0.01)
@@ -90,10 +64,6 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
                 }
 
                 desiredNodes = desiredNodes.filter(node => !node.is(SkillNodeStates.Active))
-                
-                if(desiredNodes.length === 0){
-                    //this.addRoot(startNodes, debug, desiredGroupDistances)
-                }
             }
         }
     }

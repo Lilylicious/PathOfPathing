@@ -16,7 +16,7 @@ export class ShortestPathAlgorithm implements IPathAlgorithm {
             return new Array<SkillNode>(target);
         }
         let foundNode: SkillNode = target;
-        const frontier: FibonacciHeap<SkillNode> =  new FibonacciHeap((a,b) => {
+        const frontier: FibonacciHeap<SkillNode> = new FibonacciHeap((a,b) => {
             const aPrev = prev[a.id]
             const bPrev = prev[b.id]
             if(aPrev === undefined || bPrev === undefined) return 0;

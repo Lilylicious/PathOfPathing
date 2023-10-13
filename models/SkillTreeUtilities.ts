@@ -5,6 +5,7 @@ import * as PIXI from "pixi.js";
 import { SkillTreeCodec } from "./url-processing/SkillTreeCodec";
 import { ShortestPathAlgorithm } from "./algorithms/ShortestPathAlgorithm"
 import { AllocateNodesAlgorithm } from "./algorithms/AllocateNodesAlgorithm"
+import { ScienceAlgorithm } from "./algorithms/ScienceAlgorithm"
 
 export class SkillTreeUtilities {
     private dragStart: PIXI.Point;
@@ -15,16 +16,18 @@ export class SkillTreeUtilities {
     skillTreeDataCompare: SkillTreeData | undefined;
     skillTreeCodec: SkillTreeCodec;
     
-    shortestPath: ShortestPathAlgorithm;
-    allocationAlgorithm: AllocateNodesAlgorithm;
+    //shortestPath: ShortestPathAlgorithm;
+    //allocationAlgorithm: AllocateNodesAlgorithm;
+    scienceAlgorithm: ScienceAlgorithm;
 
     constructor(context: SkillTreeData, contextComapre: SkillTreeData | undefined) {
         this.skillTreeData = context;
         this.skillTreeDataCompare = contextComapre;
         this.skillTreeCodec = new SkillTreeCodec();
 
-        this.shortestPath = new ShortestPathAlgorithm();
-        this.allocationAlgorithm = new AllocateNodesAlgorithm(this.skillTreeData);
+        //this.shortestPath = new ShortestPathAlgorithm();
+        //this.allocationAlgorithm = new AllocateNodesAlgorithm(this.skillTreeData);
+        this.scienceAlgorithm = new ScienceAlgorithm(this.skillTreeData)
 
         SkillTreeEvents.on("node", "click", this.click);
         SkillTreeEvents.on("node", "rightclick", this.rightclick);
@@ -328,9 +331,9 @@ export class SkillTreeUtilities {
     }
 
     public allocateNodes = () => {
-        //console.time('Execution time')
-        this.allocationAlgorithm.Execute(this.shortestPath);
-        //console.timeEnd('Execution time')
+        console.time('Execution time')
+        this.scienceAlgorithm.Execute();
+        console.timeEnd('Execution time')
 
         this.skillTreeData.clearState(SkillNodeStates.Hovered);
         this.skillTreeData.clearState(SkillNodeStates.Pathing);
