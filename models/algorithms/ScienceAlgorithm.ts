@@ -19,6 +19,14 @@ export class ScienceAlgorithm {
 
     Execute(): void {
         //console.time('Prep check')
+
+        
+        const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && !node.isAscendancyStart)
+        for (const node of nodesToDisable){
+            this.skillTreeData.removeState(node, SkillNodeStates.Active);
+        }
+
+
         const desiredNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired)).filter(node => !node.isAscendancyStart && node.classStartIndex === undefined).sort((a,b) => a.skill - b.skill);
         const distances: {[potentialTreeHash: string]: number} = {}
         const parent: {[potentialTreeHash: string]: PotentialTree[]} = {}
@@ -26,7 +34,7 @@ export class ScienceAlgorithm {
         const heap = new FibonacciHeap<PotentialTree>((a,b) => {
             const distA = distances[a.getHash()] ?? 0;
             const distB = distances[b.getHash()] ?? 0;
-            return distA - distB;
+            return (distA + 0) - (distB + 0);
         })
 
         const fixedSet: {[hash: string]: PotentialTree} = {}
@@ -40,6 +48,7 @@ export class ScienceAlgorithm {
         for(const potentialTree of this.initialFixedSet){
             const newPotential = new PotentialTree(potentialTree.specialNode, potentialTree.desiredNodesHit)
             fixedSet[newPotential.getHash()] = newPotential
+            distances[newPotential.getHash()] = 0
         }
 
         let finalPop: PotentialTree | undefined = undefined;
@@ -54,7 +63,7 @@ export class ScienceAlgorithm {
             fixedSet[heapPop.getHash()] = heapPop
 
             //Get adjacent node IDs
-            const adjacent = [...new Set([...heapPop.specialNode.out, ...heapPop.specialNode.in])].filter(nodeId => this.skillTreeData.nodes[nodeId].ascendancyName === '')
+            const adjacent = [...new Set([...heapPop.specialNode.out, ...heapPop.specialNode.in])].filter(nodeId => this.skillTreeData.nodes[nodeId].ascendancyName === '' && !this.skillTreeData.nodes[nodeId].is(SkillNodeStates.UnDesired))
 
             for(const adjacentNode of adjacent){
                 // New potential tree with the adjacent node but the same desired nodes
@@ -63,11 +72,11 @@ export class ScienceAlgorithm {
                 if(fixedSet[newPotential.getHash()] !== undefined) continue;
 
                 // Grab the distances
-                const heapPopDistance = distances[heapPop.getHash()] ?? 0;
-                const adjDistance = distances[newPotential.getHash()];
+                const heapPopDistance = distances[heapPop.getHash()];
+                const adjDistance = distances[newPotential.getHash()] ?? 10000000;
 
                 // If the new potential tree doesn't have a distance, set it and it's parents
-                if(adjDistance === undefined || heapPopDistance + 1 < adjDistance){
+                if(heapPopDistance + 1 < adjDistance){
                     distances[newPotential.getHash()] = heapPopDistance + 1;
                     parent[newPotential.getHash()] = [heapPop];
                     heap.push(newPotential)
@@ -117,21 +126,19 @@ export class ScienceAlgorithm {
         if(finalPop === undefined)
             return;
 
-        let parentTrees: PotentialTree[] | undefined = parent[finalPop.getHash()];
+        let parentQueue: PotentialTree[] | undefined = parent[finalPop.getHash()];
         const path = new Set<SkillNode>().add(finalPop.specialNode);
-        const parentsChecked: string[] = []
         let count2 = 0;
-        console.log(checkCount)
-        while (parentTrees !== undefined && count2++ < 100) {
-            for(const tree of parentTrees){
-                if(tree === undefined) continue;
-                path.add(tree.specialNode)
-                parentsChecked.push(tree.getHash())
-                const nextParents: PotentialTree[] = parent[tree.getHash()]?.filter(tree => !parentsChecked.includes(tree.getHash()))
-                if(nextParents === undefined) continue;
-                parentTrees = nextParents;
-            }
-            
+        //console.log(checkCount)
+        while (parentQueue.length > 0 && count2++ < 100) {
+            const nextTree = parentQueue.pop();
+            if(nextTree === undefined) break;
+            path.add(nextTree.specialNode);
+            const nextParent = parent[nextTree.getHash()]
+            if(nextParent !== undefined){
+                if(nextParent[0] !== undefined) parentQueue.push(nextParent[0])
+                if(nextParent[1] !== undefined) parentQueue.push(nextParent[1])
+            }            
         }
         for(const node of path){
             if(!node.is(SkillNodeStates.Active)){
