@@ -50,6 +50,14 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
         
         const desiredGroupDistances = this.adjustDesiredGroupDistances(desiredNodes.filter(node => node.isNotable), 0.01)
 
+        for(const node of Object.values(this.skillTreeData.nodes).filter(node => node.isNotable)){
+            desiredGroupDistances[node.skill] = desiredGroupDistances[node.skill] ? desiredGroupDistances[node.skill] - 0.5 : 0.5;
+
+            for(const stat of node.stats){
+                if(stat.includes('maximum Life')) desiredGroupDistances[node.skill] = desiredGroupDistances[node.skill] ? desiredGroupDistances[node.skill] - 0.01 : 0.99;
+            }
+        }
+
         if(desiredNodes.length > 0){
             let count = 0
             while (desiredNodes.length > 0){
