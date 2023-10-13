@@ -276,6 +276,8 @@ export class App {
 
         this.populateStartClasses(document.getElementById("skillTreeControl_Class") as HTMLSelectElement);
         this.bindSearchBox(document.getElementById("skillTreeControl_Search") as HTMLInputElement);
+        this.bindImportBox(document.getElementById("skillTreeControl_Import") as HTMLInputElement);
+        
         const controls = document.getElementsByClassName("skillTreeControls") as HTMLCollectionOf<HTMLDivElement>;
         for (const i in controls) {
             if (controls[i].style !== undefined) {
@@ -561,6 +563,12 @@ export class App {
                 SkillTreeEvents.fire("controls", "search-change", searchControl.value);
                 this.searchTimout = null;
             }, 250);
+        };
+    }
+
+    private bindImportBox = (importControl: HTMLInputElement) => {
+        importControl.onpaste = (event: ClipboardEvent) => {
+            SkillTreeEvents.fire("controls", "import-change", event.clipboardData?.getData('text'));
         };
     }
 

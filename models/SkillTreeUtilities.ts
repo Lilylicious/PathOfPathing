@@ -46,8 +46,65 @@ export class SkillTreeUtilities {
         SkillTreeEvents.on("controls", "class-change", this.changeStartClass);
         SkillTreeEvents.on("controls", "ascendancy-class-change", this.changeAscendancyClass);
         SkillTreeEvents.on("controls", "search-change", this.searchChange);
+        SkillTreeEvents.on("controls", "import-change", this.importChange);
+        
 
         SkillTreeEvents.on("skilltree", "encode-url", () => window.location.hash = '#' + this.encodeURL(true));
+    }
+
+    //   https://www.pathofexile.com/fullscreen-passive-skill-tree/AAAABgMCNgHcBAcI9BEtFSAZihm0HwIi9CQtLJwtgzHvMlg6WEI6RnFVxl-wakNsC20ZbmlvnnfjfXWDCYPbhNmIj46-ksGTJ5cGm7WpbqyYtAy747zqvoq-p8M6xKLEuMpKytPTftX437Dvevaj_TD-ugAA
+    //   https://www.pathofexile.com/fullscreen-passive-skill-tree/3.22.1/AAAABgIBfVb6fXX8xRR1EmOgOEp9Od295hcm45-NfdFvAtA_bK-8wL-kwsHV_rqklXsU5ikFLWLsvTZsjPsJgCIEtQSxbWySgOBpJpWjig-rUUeTHxxftorksRjbxKK-2xmK3viE712PBIcdQAqbTZIfQe4OoLE8vnXLG62MNnTtI_ZkpnSuj5nDOr6nH0y74ymlR37GAhqPMk4ILnTxJIudqod26dqE2WegeoQDhz9VDHPBgpuNsbMvzPbaRXwSMDY9Fr9_K11OMHxh4kCg6mIL4muQ2NVlTRLx21XmWNN-VUuv63fXX3A-z5cGk6O1SINtj_H9ASFgXhOkeFuOeu8ACJ1zEmNyHqA4b97Rb_WxBLX9a77b0XsdQLoaC-KJ5pOj
+    private decodeImport = (str: string | undefined = undefined) => {
+        if(str === undefined) return;
+        const withoutDomain = str.replace('https://www.pathofexile.com/', '')
+        const withoutTreeType = withoutDomain.replace('fullscreen-', '').replace('passive-skill-tree/', '')
+        ///3.22.0/AAAABgIBfVb6fXX8xRR1EmOgOEp9Od295hcm45-NfdFvAtA_bK-8wL-kwsHV_rqklXsU5ikFLWLsvTZsjPsJgCIEtQSxbWySgOBpJpWjig-rUUeTHxxftorksRjbxKK-2xmK3viE712PBIcdQAqbTZIfQe4OoLE8vnXLG62MNnTtI_ZkpnSuj5nDOr6nH0y74ymlR37GAhqPMk4ILnTxJIudqod26dqE2WegeoQDhz9VDHPBgpuNsbMvzPbaRXwSMDY9Fr9_K11OMHxh4kCg6mIL4muQ2NVlTRLx21XmWNN-VUuv63fXX3A-z5cGk6O1SINtj_H9ASFgXhOkeFuOeu8ACJ1zEmNyHqA4b97Rb_WxBLX9a77b0XsdQLoaC-KJ5pOj
+        const regex = /\d\.\d\d\.\d\//g
+        const data = withoutTreeType.replace(regex, '')
+        
+        try {
+            if (data === null) {
+                console.log('Data is null')
+                return;
+            }
+
+            const def = this.skillTreeCodec.decodeURL(data, this.skillTreeData, true);
+            this.skillTreeData.version = def.Version;
+            this.changeStartClass(def.Class, false);
+            this.changeAscendancyClass(def.Ascendancy - 1, false);
+            const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired))
+            for (const node of nodesToDisable){
+                this.skillTreeData.removeState(node, SkillNodeStates.Desired);
+            }
+            for (const node of def.Nodes) {
+                if(node.isNotable || node.isKeystone || node.isJewelSocket || node.isAscendancyStart || node.classStartIndex !== undefined)
+                    this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
+            }
+            
+            for (const node of def.ExtendedNodes) {
+                if(node.isNotable || node.isKeystone || node.isJewelSocket || node.isAscendancyStart || node.classStartIndex !== undefined)
+                    this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
+            }
+
+            for (const [node, effect] of def.MasteryEffects) {
+                this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
+                this.skillTreeData.masteryEffects[node.skill] = effect;
+            }
+            
+            for (const node of def.Desired) {
+                this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
+            }
+            for (const node of def.Undesired) {
+                this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.UnDesired)
+            }
+            window.location.hash = '#' + this.encodeURL(false);
+
+            this.allocateNodes();
+        }
+        catch (ex) {
+            //window.location.hash = "";
+            console.log(ex);
+        }
     }
 
     private lastHash = "";
@@ -207,6 +264,11 @@ export class SkillTreeUtilities {
 
         SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
     }
+
+    private importChange = (str: string | undefined = undefined) => {
+        this.decodeImport(str)
+    }
+
 
     private click = (node: SkillNode) => {
         //this.skillTreeData.clearState(SkillNodeStates.Highlighted)
