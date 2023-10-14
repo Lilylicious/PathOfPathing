@@ -55,7 +55,7 @@ export class SkillNode implements ISkillNode {
     reminderText: string[];
     skill: number;
     stats: string[];
-    
+
     state: SkillNodeStates;
 
     nodeGroup: IGroup | undefined;
@@ -67,6 +67,7 @@ export class SkillNode implements ISkillNode {
     y: number;
     isRegular2: boolean;
     isRegular1: boolean;
+    targetSize: { width: number, height: number };
     hoverText: string | null = null;
     patch: SemVer;
     distance: { [node: string]: number };
@@ -119,6 +120,7 @@ export class SkillNode implements ISkillNode {
         this.y = this.getY(this.arc);
         this.isRegular2 = !this.isKeystone && !this.isNotable && !this.isJewelSocket && !this.isMastery && !this.isWormhole;
         this.isRegular1 = this.isRegular2 && (this.grantedStrength > 0 || this.grantedDexterity > 0 || this.grantedIntelligence > 0) && this.stats.filter(utils.NotNullOrWhiteSpace).length === 1;
+        this.targetSize = this.getTargetSize();
         this.patch = patch;
 
         if (this.grantedPassivePoints > 0) {
@@ -129,6 +131,21 @@ export class SkillNode implements ISkillNode {
     private getArc = (oidx: number): number => this.orbitAngles[this.orbit] !== undefined && this.orbitAngles[this.orbit].length > oidx ? this.orbitAngles[this.orbit][oidx] : 0;
     private getX = (arc: number): number => this.orbitRadii.length > this.orbit && this.nodeGroup !== undefined ? (this.nodeGroup.x * this.scale) - (this.orbitRadii[this.orbit] * this.scale) * Math.sin(-arc) : 0;
     private getY = (arc: number): number => this.orbitRadii.length > this.orbit && this.nodeGroup !== undefined ? (this.nodeGroup.y * this.scale) - (this.orbitRadii[this.orbit] * this.scale) * Math.cos(-arc) : 0;
+    private getTargetSize = (): { width: number, height: number } => {
+        if (this.isRegular1 || this.isRegular2) {
+            return { width: Math.floor(70 * this.scale), height: Math.floor(70 * this.scale) };
+        }
+
+        if (this.isNotable || this.isJewelSocket || this.isMastery) {
+            return { width: Math.floor(100 * this.scale), height: Math.floor(100 * this.scale) };
+        }
+
+        if (this.isKeystone || this.isWormhole) {
+            return { width: Math.floor(138 * this.scale), height: Math.floor(140 * this.scale) };
+        }
+
+        return { width: 0, height: 0 };
+    }
 
     public is = (test: SkillNodeStates) => {
         return (this.state & test) === test;
@@ -176,7 +193,7 @@ export class SkillNode implements ISkillNode {
         } else if (this.ascendancyName !== "" || this.expansionJewel !== undefined || this.isProxy || this.nodeGroup?.isProxy) {
             return "Normal";
         }
-        
+
         return "Unallocated";
     }
 
@@ -250,21 +267,5 @@ export class SkillNode implements ISkillNode {
 
     public GetConnectionType = (other: SkillNode): "Active" | "Intermediate" | "Normal" => {
         return this.is(SkillNodeStates.Active) && other.is(SkillNodeStates.Active) ? "Active" : (this.is(SkillNodeStates.Active) || other.is(SkillNodeStates.Active) || (this.is(SkillNodeStates.Pathing) && other.is(SkillNodeStates.Pathing)) ? "Intermediate" : "Normal");
-    }
-
-    public GetTargetSize = (): { width: number, height: number } => {
-        if (this.isRegular1 || this.isRegular2) {
-            return { width: Math.floor(70 * this.scale), height: Math.floor(70 * this.scale) };
-        }
-
-        if (this.isNotable || this.isJewelSocket || this.isMastery) {
-            return { width: Math.floor(100 * this.scale), height: Math.floor(100 * this.scale) };
-        }
-        
-        if (this.isKeystone || this.isWormhole) {
-            return { width: Math.floor(138 * this.scale), height: Math.floor(140 * this.scale) };
-        }
-
-        return { width: 0, height: 0 };
     }
 }

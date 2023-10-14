@@ -11,12 +11,14 @@ import { utils } from './utils';
 import { SkillTreePreprocessors } from '../models/skill-tree/SkillTreePreprocessors';
 import { SemVer } from 'semver';
 import internal from 'stream';
+import { UIEvents } from 'models/events/UIEvents';
 
 export class App {
     private skillTreeData!: SkillTreeData;
     private skillTreeDataCompare: SkillTreeData | undefined;
     private skillTreeUtilities!: SkillTreeUtilities;
     private renderer!: ISkillTreeRenderer;
+    private uievents!: UIEvents
 
     public launch = async (version: string, versionCompare: string, versionJson: IVersions) => {
         for (const i of [version, versionCompare]) {
@@ -40,6 +42,7 @@ export class App {
                 this.skillTreeDataCompare = undefined;
             }
         }
+        this.uievents = new UIEvents(this.skillTreeData, this.skillTreeDataCompare);
         this.skillTreeUtilities = new SkillTreeUtilities(this.skillTreeData, this.skillTreeDataCompare);
 
         const versionSelect = document.getElementById("skillTreeControl_Version") as HTMLSelectElement;
@@ -88,9 +91,9 @@ export class App {
             this.skillTreeData.clearState(SkillNodeStates.Desired);
             this.skillTreeData.clearState(SkillNodeStates.UnDesired);
 
-            SkillTreeEvents.fire("controls", "class-change", start);
-            SkillTreeEvents.fire("controls", "ascendancy-class-change", asc);
-            SkillTreeEvents.fire("skilltree", "highlighted-nodes-update");
+            SkillTreeEvents.controls.fire("class-change", start);
+            SkillTreeEvents.controls.fire("ascendancy-class-change", asc);
+            SkillTreeEvents.skill_tree.fire("highlighted-nodes-update");
         });
 
         const exportElement = document.getElementById("skillTreeControl_Export") as HTMLButtonElement;
@@ -258,21 +261,20 @@ export class App {
     }
 
     private SetupEventsAndControls = () => {
-        SkillTreeEvents.on("skilltree", "highlighted-nodes-update", this.renderer.RenderHighlight);
-        SkillTreeEvents.on("skilltree", "class-change", this.renderer.RenderCharacterStartsActive);
-        SkillTreeEvents.on("skilltree", "class-change", this.updateClassControl);
-        SkillTreeEvents.on("skilltree", "ascendancy-class-change", this.updateAscClassControl);
+        SkillTreeEvents.skill_tree.on("highlighted-nodes-update", this.renderer.RenderHighlight);
+        SkillTreeEvents.skill_tree.on("class-change", this.renderer.RenderCharacterStartsActive);
+        SkillTreeEvents.skill_tree.on("class-change", this.updateClassControl);
+        SkillTreeEvents.skill_tree.on("ascendancy-class-change", this.updateAscClassControl);
+        
+        SkillTreeEvents.skill_tree.on("hovered-nodes-start", this.renderer.StartRenderHover);
+        SkillTreeEvents.skill_tree.on("hovered-nodes-end", this.renderer.StopRenderHover);
+        SkillTreeEvents.skill_tree.on("active-nodes-update", this.renderer.RenderActive);
+        SkillTreeEvents.skill_tree.on("active-nodes-update", this.updateStats);
 
-
-        SkillTreeEvents.on("skilltree", "hovered-nodes-start", this.renderer.StartRenderHover);
-        SkillTreeEvents.on("skilltree", "hovered-nodes-end", this.renderer.StopRenderHover);
-        SkillTreeEvents.on("skilltree", "active-nodes-update", this.renderer.RenderActive);
-        SkillTreeEvents.on("skilltree", "active-nodes-update", this.updateStats);
-
-        SkillTreeEvents.on("skilltree", "normal-node-count", (count: number) => { const e = document.getElementById("skillTreeNormalNodeCount"); if (e !== null) e.innerHTML = count.toString(); });
-        SkillTreeEvents.on("skilltree", "normal-node-count-maximum", (count: number) => { const e = document.getElementById("skillTreeNormalNodeCountMaximum"); if (e !== null) e.innerHTML = count.toString(); });
-        SkillTreeEvents.on("skilltree", "ascendancy-node-count", (count: number) => { const e = document.getElementById("skillTreeAscendancyNodeCount"); if (e !== null) e.innerHTML = count.toString(); });
-        SkillTreeEvents.on("skilltree", "ascendancy-node-count-maximum", (count: number) => { const e = document.getElementById("skillTreeAscendancyNodeCountMaximum"); if (e !== null) e.innerHTML = count.toString(); });
+        SkillTreeEvents.skill_tree.on("normal-node-count", (count: number) => { const e = document.getElementById("skillTreeNormalNodeCount"); if (e !== null) e.innerHTML = count.toString(); });
+        SkillTreeEvents.skill_tree.on("normal-node-count-maximum", (count: number) => { const e = document.getElementById("skillTreeNormalNodeCountMaximum"); if (e !== null) e.innerHTML = count.toString(); });
+        SkillTreeEvents.skill_tree.on("ascendancy-node-count", (count: number) => { const e = document.getElementById("skillTreeAscendancyNodeCount"); if (e !== null) e.innerHTML = count.toString(); });
+        SkillTreeEvents.skill_tree.on("ascendancy-node-count-maximum", (count: number) => { const e = document.getElementById("skillTreeAscendancyNodeCountMaximum"); if (e !== null) e.innerHTML = count.toString(); });
 
         this.populateStartClasses(document.getElementById("skillTreeControl_Class") as HTMLSelectElement);
         this.bindSearchBox(document.getElementById("skillTreeControl_Search") as HTMLInputElement);
@@ -293,45 +295,58 @@ export class App {
         }
     }
 
-    private updateStats = () => {
-        const defaultGroup = this.skillTreeData.tree === "Atlas" ? "Maps" : "Default";
-
-        const masteries: string[] = ["The Maven"];
-        const masteryTest: { [name: string]: string } = {}
-        for (const id in this.skillTreeData.nodes) {
-            const node = this.skillTreeData.nodes[id];
-            const mastery = this.skillTreeData.getMasteryForGroup(node.nodeGroup);
-            if (mastery !== null && mastery.name !== defaultGroup) {
-                masteries.push(mastery.name);
-                masteryTest[mastery.name] = mastery.name.replace("The", "").replace("Mastery", "")
+    private masteries: string[] | undefined = undefined;
+    private masteryTest: { [name: string]: string } | undefined = undefined;
+    private defaultStats: { [stat: string]: boolean } | undefined = undefined;
+    private buildStatLookups = (defaultGroup: string): [masteries: string[], masteryTest: { [name: string]: string }, defaultStats: { [stat: string]: boolean }] => {
+        if (this.masteries === undefined || this.masteryTest === undefined) {
+            const masteries: string[] = ["The Maven"];
+            const masteryTest: { [name: string]: string } = {}
+            for (const id in this.skillTreeData.nodes) {
+                const node = this.skillTreeData.nodes[id];
+                const mastery = this.skillTreeData.getMasteryForGroup(node.nodeGroup);
+                if (mastery !== null && mastery.name !== defaultGroup) {
+                    masteries.push(mastery.name);
+                    masteryTest[mastery.name] = mastery.name.replace("The", "").replace("Mastery", "")
+                }
             }
+            this.masteries = masteries;
+            this.masteryTest = masteryTest;
         }
 
-        const defaultStats: { [stat: string]: boolean } = {};
-        for (const id in this.skillTreeData.nodes) {
-            const node = this.skillTreeData.nodes[id];
-            for (const stat of node.stats) {
-                if (defaultStats[stat] !== undefined) {
-                    continue
-                }
+        if (this.defaultStats === undefined) {
+            const defaultStats: { [stat: string]: boolean } = {};
+            for (const id in this.skillTreeData.nodes) {
+                const node = this.skillTreeData.nodes[id];
+                for (const stat of node.stats) {
+                    if (defaultStats[stat] !== undefined) {
+                        continue
+                    }
 
-                const mastery = this.skillTreeData.getMasteryForGroup(node.nodeGroup);
-                if (mastery === null) {
-                    let found = false;
-                    for (const name of masteries) {
-                        if (stat.indexOf(masteryTest[name]) >= 0) {
-                            found = true
-                            break;
+                    const mastery = this.skillTreeData.getMasteryForGroup(node.nodeGroup);
+                    if (mastery === null) {
+                        let found = false;
+                        for (const name of this.masteries) {
+                            if (stat.indexOf(this.masteryTest[name]) >= 0) {
+                                found = true
+                                break;
+                            }
+                        }
+
+                        if (!found) {
+                            defaultStats[stat] = true;
                         }
                     }
-
-                    if (!found) {
-                        defaultStats[stat] = true;
-                    }
                 }
             }
+            this.defaultStats = defaultStats;
         }
+        return [this.masteries, this.masteryTest, this.defaultStats];
+    }
 
+    private updateStats = () => {
+        const defaultGroup = this.skillTreeData.tree === "Atlas" ? "Maps" : "Default";
+        const [masteries, masteryTest, defaultStats] = this.buildStatLookups(defaultGroup);
 
         const groups: { [group: string]: string[] } = {};
         const statGroup: { [stat: string]: string } = {};
@@ -420,7 +435,7 @@ export class App {
         title.className = "title";
         title.innerText = name;
         title.addEventListener("click", () => {
-            const elements = document.querySelectorAll(`[data-group-name*="${name}"]`);
+            const elements = document.querySelectorAll(`[data-group-name="${name}"]`);
             elements.forEach((element) => {
                 element.toggleAttribute("hidden");
             })
@@ -481,7 +496,7 @@ export class App {
         const ascControl = document.getElementById("skillTreeControl_Ascendancy") as HTMLSelectElement;
         classControl.onchange = () => {
             const val = classControl.value;
-            SkillTreeEvents.fire("controls", "class-change", +val);
+            SkillTreeEvents.controls.fire("class-change", +val);
             if (ascControl !== null) {
                 this.populateAscendancyClasses(ascControl, +val, 0);
             }
@@ -549,7 +564,7 @@ export class App {
 
 
         ascControl.onchange = () => {
-            SkillTreeEvents.fire("controls", "ascendancy-class-change", +ascControl.value);
+            SkillTreeEvents.controls.fire("ascendancy-class-change", +ascControl.value);
         };
     }
 
@@ -560,7 +575,7 @@ export class App {
                 clearTimeout(this.searchTimout);
             }
             this.searchTimout = setTimeout(() => {
-                SkillTreeEvents.fire("controls", "search-change", searchControl.value);
+                SkillTreeEvents.controls.fire("search-change", searchControl.value);
                 this.searchTimout = null;
             }, 250);
         };
