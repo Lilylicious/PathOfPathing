@@ -34,19 +34,20 @@ export class SkillTreeUtilities {
         SkillTreeEvents.skill_tree.on("encode-url", this.encodeURL);
     }
 
-    //   https://www.pathofexile.com/fullscreen-passive-skill-tree/AAAABgMCNgHcBAcI9BEtFSAZihm0HwIi9CQtLJwtgzHvMlg6WEI6RnFVxl-wakNsC20ZbmlvnnfjfXWDCYPbhNmIj46-ksGTJ5cGm7WpbqyYtAy747zqvoq-p8M6xKLEuMpKytPTftX437Dvevaj_TD-ugAA
-    //   https://www.pathofexile.com/fullscreen-passive-skill-tree/3.22.1/AAAABgIBfVb6fXX8xRR1EmOgOEp9Od295hcm45-NfdFvAtA_bK-8wL-kwsHV_rqklXsU5ikFLWLsvTZsjPsJgCIEtQSxbWySgOBpJpWjig-rUUeTHxxftorksRjbxKK-2xmK3viE712PBIcdQAqbTZIfQe4OoLE8vnXLG62MNnTtI_ZkpnSuj5nDOr6nH0y74ymlR37GAhqPMk4ILnTxJIudqod26dqE2WegeoQDhz9VDHPBgpuNsbMvzPbaRXwSMDY9Fr9_K11OMHxh4kCg6mIL4muQ2NVlTRLx21XmWNN-VUuv63fXX3A-z5cGk6O1SINtj_H9ASFgXhOkeFuOeu8ACJ1zEmNyHqA4b97Rb_WxBLX9a77b0XsdQLoaC-KJ5pOj
     private decodeImport = (str: string | undefined = undefined) => {
         if(str === undefined) return;
+        
         const withoutDomain = str.replace('https://www.pathofexile.com/', '')
         const withoutTreeType = withoutDomain.replace('fullscreen-', '').replace('passive-skill-tree/', '')
-        ///3.22.0/AAAABgIBfVb6fXX8xRR1EmOgOEp9Od295hcm45-NfdFvAtA_bK-8wL-kwsHV_rqklXsU5ikFLWLsvTZsjPsJgCIEtQSxbWySgOBpJpWjig-rUUeTHxxftorksRjbxKK-2xmK3viE712PBIcdQAqbTZIfQe4OoLE8vnXLG62MNnTtI_ZkpnSuj5nDOr6nH0y74ymlR37GAhqPMk4ILnTxJIudqod26dqE2WegeoQDhz9VDHPBgpuNsbMvzPbaRXwSMDY9Fr9_K11OMHxh4kCg6mIL4muQ2NVlTRLx21XmWNN-VUuv63fXX3A-z5cGk6O1SINtj_H9ASFgXhOkeFuOeu8ACJ1zEmNyHqA4b97Rb_WxBLX9a77b0XsdQLoaC-KJ5pOj
+        
         const regex = /\d\.\d\d\.\d\//g
-        const data = withoutTreeType.replace(regex, '')
+        const withoutVersion = withoutTreeType.replace(regex, '')
+        
+        const regex2 = /\?accountName.*/g
+        const data = withoutVersion.replace(regex2, '')
         
         try {
             if (data === null) {
-                console.log('Data is null')
                 return;
             }
 
@@ -58,17 +59,55 @@ export class SkillTreeUtilities {
             for (const node of nodesToDisable){
                 this.skillTreeData.removeState(node, SkillNodeStates.Desired);
             }
+
+
+            let rootNode = Object.values(this.skillTreeData.getClassStartNodes())[0]
+
+            for (const id in this.skillTreeData.classStartNodes) {
+                const node = this.skillTreeData.nodes[id];
+                if (node.classStartIndex === undefined) {
+                    continue;
+                }
+    
+                if (node.classStartIndex !== def.Class) {
+                    continue;
+                }
+    
+                rootNode = node
+            }
+
+            if(rootNode === undefined){
+                return
+            }
+            const nodesToFind = def.Nodes.map(node => node.skill);
+            const nodesFound: Number[] = []
+
+            let adjacent = [...new Set([...rootNode.out, ...rootNode.in])].map(nodeString => Number(nodeString))
+            adjacent = adjacent.filter(nodeId => nodesToFind.includes(nodeId) && !nodesFound.includes(nodeId))
+            while(adjacent.length > 0){
+                const nextNode = adjacent.shift();
+                if(nextNode === undefined){
+                    break;
+                }
+                nodesFound.push(nextNode)
+                const node = this.skillTreeData.nodes[String(nextNode)]
+                adjacent.push(...[...new Set([...node.out, ...node.in])].map(nodeString => Number(nodeString)).filter(newNode => nodesToFind.includes(newNode) && !nodesFound.includes(newNode)))
+            }
+
             for (const node of def.Nodes) {
+                if(!nodesFound.includes(node.skill)) continue;
                 if(node.isNotable || node.isKeystone || node.isJewelSocket || node.isAscendancyStart || node.classStartIndex !== undefined)
                     this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
             }
             
             for (const node of def.ExtendedNodes) {
+                if(!nodesFound.includes(node.skill)) continue;
                 if(node.isNotable || node.isKeystone || node.isJewelSocket || node.isAscendancyStart || node.classStartIndex !== undefined)
                     this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
             }
 
             for (const [node, effect] of def.MasteryEffects) {
+                if(!nodesFound.includes(node.skill)) continue;
                 this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
                 this.skillTreeData.masteryEffects[node.skill] = effect;
             }

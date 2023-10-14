@@ -87,6 +87,10 @@ export class App {
             const start = this.skillTreeData.getStartClass();
             const asc = this.skillTreeData.getAscendancyClass();
 
+            const importControl = document.getElementById("skillTreeControl_Import") as HTMLInputElement
+
+            importControl.value = ''
+
             this.skillTreeData.clearState(SkillNodeStates.Active);
             this.skillTreeData.clearState(SkillNodeStates.Desired);
             this.skillTreeData.clearState(SkillNodeStates.UnDesired);
@@ -583,8 +587,11 @@ export class App {
 
     private bindImportBox = (importControl: HTMLInputElement) => {
         importControl.onpaste = (event: ClipboardEvent) => {
-            SkillTreeEvents.fire("controls", "import-change", event.clipboardData?.getData('text'));
+            SkillTreeEvents.controls.fire("import-change", event.clipboardData?.getData('text'));
         };
+        importControl.onclick = () => {
+            importControl.select();
+        }
     }
 
     public static decodeURLParams = (search = ''): { [id: string]: string } => {
