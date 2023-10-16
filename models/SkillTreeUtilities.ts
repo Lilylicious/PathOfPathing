@@ -36,16 +36,14 @@ export class SkillTreeUtilities {
 
     private decodeImport = (str: string | undefined = undefined) => {
         if(str === undefined) return;
-        
         const withoutDomain = str.replace('https://www.pathofexile.com/', '')
-        const withoutTreeType = withoutDomain.replace('fullscreen-', '').replace('passive-skill-tree/', '')
+        const withoutTreeType = withoutDomain.replace('fullscreen-', '').replace('passive-skill-tree/', '').replace('atlas-skill-tree/', '')
         
         const regex = /\d\.\d\d\.\d\//g
         const withoutVersion = withoutTreeType.replace(regex, '')
         
         const regex2 = /\?accountName.*/g
         const data = withoutVersion.replace(regex2, '')
-        
         try {
             if (data === null) {
                 return;
