@@ -26,11 +26,12 @@ export class App {
 
             let options: ISkillTreeOptions | undefined = undefined;
             const semver = new SemVer(i);
-            var file = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree.json`).then(response => response.json());
+            //var file = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree.json`).then(response => response.json());
+            var file = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree_Pregenerated_001.json`).then(response => response.json());
             var json = file as ISkillTreeBase;
             //this.SetupPregeneration(file)
 
-            const data = new SkillTreeData(SkillTreePreprocessors.Decode(json, options), semver);
+            const data = new SkillTreeData(SkillTreePreprocessors.Decode(json, options), semver, file);
 
             if (i === version) {
                 this.skillTreeData = data;
@@ -138,7 +139,7 @@ export class App {
 
     private SetupPregeneration = (file) => {
         
-        const sourceNodes = Object.values(file.nodes).map(node => node.skill);
+    const sourceNodes = Object.values(file.nodes).filter(node => !node.isBlighted && node.name !== 'Position Proxy' && (node.out !== undefined || node.in != undefined)).map(node => node.skill);
         let destinationNodes = []
 
         // let sourceNodes = Object.values(file.nodes).filter(
@@ -147,38 +148,49 @@ export class App {
         //     && ((node.out !== undefined && node.out.length > 0) 
         //     || (node.in !== undefined && node.in.length > 0))).map(node => Number(node.skill));
 
-        for (const nodeId of file.nodes.root.out){
-            let actualNodes = []
-            actualNodes.push(...file.nodes[nodeId].out)
-            actualNodes.push(...file.nodes[nodeId].in)
-            for (const secondNodeId of actualNodes) {
-                let startNode = file.nodes[secondNodeId]
-                if (startNode.isAscendancyStart === undefined){
-                    destinationNodes.push(Number(secondNodeId))
-                }
+        // for (const nodeId of file.nodes.root.out){
+        //     let actualNodes = []
+        //     actualNodes.push(...file.nodes[nodeId].out)
+        //     actualNodes.push(...file.nodes[nodeId].in)
+        //     for (const secondNodeId of actualNodes) {
+        //         let startNode = file.nodes[secondNodeId]
+        //         if (startNode.isAscendancyStart === undefined){
+        //             destinationNodes.push(Number(secondNodeId))
+        //         }
                     
-            }
-        }
-        //const destinationNodes = sourceNodes;
+        //     }
+        // }
+        destinationNodes = sourceNodes;
         
         this.PreGenerateShortestDistances(file, sourceNodes, destinationNodes);
     }
 
     private PreGenerateShortestDistances = (file, sourceNodes, destinationNodes) => {
+        console.log('Started pregenerating')
         let verbose = false
-        if(file.tree === 'Default')
-        return;
+        // if(file.tree === 'Default')
+        //     return;
         const nodes = file.nodes
         console.log('Shortest distances started')
+        file.distance_arrays = []
+        file.labeling_dict = {}
+        let position = 0
         for (const nodeId in nodes){
-            file.nodes[nodeId].distance = {}
+            const node = file.nodes[nodeId]
+            if(!node.isBlighted && node.name !== 'Position Proxy' && (node.out !== undefined || node.in != undefined))
+                file.labeling_dict[nodeId] = position++;
         }
-        console.log('Reset done')
+        console.log('Reset done', file.labeling_dict)
 
         let count = 0
         console.log('Checking ' + sourceNodes.length + '')
         console.log(destinationNodes)
         for (const sourceId of sourceNodes){   
+            //console.log('SourceId', sourceId)
+            const nodePosition = file.labeling_dict[sourceId]
+            //console.log('Nodeposition', nodePosition)
+            let nodesSet = 0
+            const distanceArray: Number[] = Array(nodePosition).fill(-1);
             if (sourceId === "root"){
                 console.log('Skipping root')
                 continue;
@@ -188,21 +200,27 @@ export class App {
                 console.log('Skipping undefined node')
                 continue;
             }
+
+            if(nodesSet >= nodePosition){
+                console.log('Wrong nodeposition')
+                continue;
+            }
+                
             
             // if(file.tree === 'Atlas' && nodes[sourceId].isMastery !== 'undefined'){
             //     console.log('Skipping mastery')
             //     continue;
             // }
             //const sourceId = 6
-            if (file.tree !== 'Atlas' && nodes[sourceId].ascendancyName !== undefined){
-                continue;
-            }      
+            // if (file.tree !== 'Atlas' && nodes[sourceId].ascendancyName !== undefined){
+            //     continue;
+            // }      
 
             //console.log('Skipping mastery')
 
             if((nodes[sourceId].out === undefined && nodes[sourceId].in === undefined)
             || (nodes[sourceId].out && nodes[sourceId].out.length === 0 && nodes[sourceId].in && nodes[sourceId].in.length === 0)){
-                console.log('Skipping no out or in')
+                console.log('Skipping no out or in', sourceId)
                 continue;
             }
 
@@ -216,6 +234,7 @@ export class App {
             while (frontier.length > 0) {
                 const current = frontier.shift();
                 if (current === undefined) {
+                    console.log('Current undefined')
                     continue;
                 }
                 if(sourceId === 65499 && current.skill === 5515){
@@ -231,15 +250,19 @@ export class App {
                 if(current.in)actualNodes.push(...current.in)
                 for (const id of actualNodes) {
                     const out = nodes[id];
-                    if (out.ascendancyName !== "" && out.ascendancyName !== undefined) {
-                        continue;
-                    }
+
                     if (explored[id] || distance[id]) {
                         continue;
                     }
 
-                    if(destinationNodes.includes(Number(id))){
-                        file.nodes[sourceId].distance[id] = dist + 1;
+                    const lowerId = Math.min(Number(sourceId), Number(id))
+                    const higherId = Math.max(Number(sourceId), Number(id))
+
+                    //&& (file.nodes[lowerId].distance[higherId] === undefined || (file.nodes[lowerId].distance[higherId] && file.nodes[lowerId].distance[higherId] > dist + 1))
+                    //console.log(id, distanceArray[file.labeling_dict[id]])
+                    if(file.labeling_dict[id] < nodePosition && destinationNodes.includes(Number(id))){
+                        distanceArray[file.labeling_dict[Number(id)]] = dist + 1
+                        nodesSet++;
                     }
     
                     count++
@@ -247,14 +270,18 @@ export class App {
                     frontier.push(out);
                 }
             }
+            file.distance_arrays[file.labeling_dict[sourceId]] = distanceArray;
+            //console.log('Added', distanceArray)
+            //return;
         }
         console.log('Total frontier checks: ' + count);
 
         var a = document.createElement("a");
-        var newFile = new Blob([JSON.stringify(file, null, 4)], {type: 'text/plain'});
+        var newFile = new Blob([JSON.stringify(file, null, 0)], {type: 'text/plain'});
         a.href = URL.createObjectURL(newFile);
         a.download = 'UpdatedTree.json';
         a.click();
+        console.log('Finished pregenerating')
     }
 
     private SetupEventsAndControls = () => {

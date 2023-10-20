@@ -28,6 +28,9 @@ export class SkillTreeData implements ISkillTreeData {
     jewelSlots: Array<number>;
     extraImages: { [id: string]: IClassImage; };
 
+    nodeLabelDict: { [id: string]: number; };
+    distanceArrays: number[][];
+
     width: number;
     height: number;
     maxZoomLevel: number;
@@ -46,7 +49,7 @@ export class SkillTreeData implements ISkillTreeData {
         [SkillNodeStates.UnDesired]: new Array<string>(),
     }
 
-    constructor(skillTree: ISkillTreeData, patch: SemVer) {
+    constructor(skillTree: ISkillTreeData, patch: SemVer, treeFile: File) {
         this.tree = skillTree.tree || "Default";
         this.patch = patch;
         this.version = 4; skillTree.version = this.version;
@@ -184,6 +187,9 @@ export class SkillTreeData implements ISkillTreeData {
                 this.classStartNodes[id] = node;
             }
         }
+
+        this.nodeLabelDict = treeFile.labeling_dict
+        this.distanceArrays = treeFile.distance_arrays
     }
 
     private getOrbitAngles = (skillsPerOrbit: Array<number>): { [orbit: number]: Array<number> } => {
