@@ -61,5 +61,6 @@ export class SkillTreeEvents {
         | "down"
         | "move"
         | "up"
+        | "rightup"
     >();
 }

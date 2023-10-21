@@ -88,6 +88,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         this.viewport.on('pointerdown', (event) => SkillTreeEvents.viewport.fire("down", this.viewport.toWorld(event.global)));
         this.viewport.on('pointermove', (event) => SkillTreeEvents.viewport.fire("move", this.viewport.toWorld(event.global)));
         this.viewport.on('pointerup', (event) => SkillTreeEvents.viewport.fire("up", this.viewport.toWorld(event.global)));
+        this.viewport.on('rightup', (event) => SkillTreeEvents.viewport.fire("rightup", this.viewport.toWorld(event.global)));
         this.viewport.on('pointercancel', () => SkillTreeEvents.viewport.fire("cancel"));
 
         this.pixi.stage.addChild(this.viewport);

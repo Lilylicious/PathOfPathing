@@ -16,6 +16,7 @@ export class UIEvents {
         this.skillTreeDataCompare = contextComapre;
 
         SkillTreeEvents.viewport.on("up", this.up);
+        SkillTreeEvents.viewport.on("rightup", this.rightup);
         SkillTreeEvents.viewport.on("move", this.move);
         SkillTreeEvents.viewport.on("down", this.down);
         SkillTreeEvents.viewport.on("cancel", () => setTimeout(() => this.cancelDrag(), 250));
@@ -36,12 +37,27 @@ export class UIEvents {
         this.cancelDrag();
     }
 
+    private rightup = (point: IPoint) => {
+        if (!this.dragged) {
+            UIEvents.rightClickSkillTree(point, this.skillTreeData);
+        }
+        this.cancelDrag();
+    }
+
     private static clickSkillTree = (point: IPoint, skillTree: SkillTreeData) => {
         const node = skillTree.getNodeAtPoint(point);
         if (node === null) {
             return;
         }
         SkillTreeEvents.node.fire("click", node);
+    }
+
+    private static rightClickSkillTree = (point: IPoint, skillTree: SkillTreeData) => {
+        const node = skillTree.getNodeAtPoint(point);
+        if (node === null) {
+            return;
+        }
+        SkillTreeEvents.node.fire("rightclick", node);
     }
 
     private cancelDrag = () => {
