@@ -3,6 +3,7 @@ import { Constants } from "./Constants";
 import { SemVer } from "semver";
 import { versions } from "./versions/verions";
 import { ISkillTreeData } from "./types/ISkillTreeData";
+import { SpatialHash } from "./spatial-hash/SpatialHash";
 
 export class SkillTreeData implements ISkillTreeData {
     tree: "Default" | "Royale" | "Atlas";
@@ -33,7 +34,7 @@ export class SkillTreeData implements ISkillTreeData {
     maxZoomLevel: number;
     scale: number;
     classStartNodes: { [id: string]: SkillNode };
-    ascedancyNodes: { [id: string]: SkillNode };
+    ascendancyNodes: { [id: string]: SkillNode };
     nodesInState: { [state in SkillNodeStates]: Array<string> } = {
         [SkillNodeStates.None]: new Array<string>(),
         [SkillNodeStates.Active]: new Array<string>(),
@@ -45,6 +46,7 @@ export class SkillTreeData implements ISkillTreeData {
         [SkillNodeStates.Desired]: new Array<string>(),
         [SkillNodeStates.UnDesired]: new Array<string>(),
     }
+    grid: SpatialHash
 
     constructor(skillTree: ISkillTreeData, patch: SemVer) {
         this.tree = skillTree.tree || "Default";
@@ -158,9 +160,10 @@ export class SkillTreeData implements ISkillTreeData {
             }
         }
         // #endregion
+        this.grid = new SpatialHash([[this.min_x, this.min_y], [this.max_x, this.max_y]], [100, 100]);
         this.nodes = {};
         this.classStartNodes = {};
-        this.ascedancyNodes = {};
+        this.ascendancyNodes = {};
         const orbitAngles = this.getOrbitAngles(skillTree.constants.skillsPerOrbit)
         for (const id in skillTree.nodes) {
             const groupId = skillTree.nodes[id].group || 0;
@@ -177,13 +180,21 @@ export class SkillTreeData implements ISkillTreeData {
             }
 
             if (node.ascendancyName !== "") {
-                this.ascedancyNodes[id] = node;
+                this.ascendancyNodes[id] = node;
             }
 
             if (node.classStartIndex !== undefined) {
                 this.classStartNodes[id] = node;
             }
+
+            if (this.shouldAddToGrid(node)) {
+                this.grid.add(node.id, { x: node.x, y: node.y }, node.targetSize)
+            }
         }
+    }
+
+    private shouldAddToGrid = (node: SkillNode): boolean => {
+        return node.group !== undefined && node.classStartIndex === undefined;
     }
 
     private getOrbitAngles = (skillsPerOrbit: Array<number>): { [orbit: number]: Array<number> } => {
@@ -234,7 +245,7 @@ export class SkillTreeData implements ISkillTreeData {
     }
 
     public getAscendancyClass = (): number => {
-        for (const id in this.ascedancyNodes) {
+        for (const id in this.ascendancyNodes) {
             if (this.nodes[id].isAscendancyStart && this.nodes[id].is(SkillNodeStates.Active)) {
                 if (this.classes === undefined) {
                     continue;
@@ -326,6 +337,40 @@ export class SkillTreeData implements ISkillTreeData {
         }
 
         return _nodes;
+    }
+
+    public getNodeAtPoint = (point: IPoint): SkillNode | null => {
+        const ids = this.grid.find(point, { width: 0, height: 0 });
+        if (ids.length === 0) {
+            return null;
+        }
+
+        let minNode: SkillNode | null = null;
+        let minDistance: number | null = null;
+        for (const id of ids) {
+            const node = this.nodes[id];
+            const distance = this.inRange(node, point);
+            if (distance === null) {
+                continue;
+            }
+            if (minDistance === null || distance < minDistance) {
+                minNode = node;
+                minDistance = distance;
+            }
+        }
+        return minNode;
+    }
+
+    private inRange = (node: SkillNode, point: IPoint): number | null => {
+        const size = node.targetSize;
+        const range = size.width * size.height * this.scale;
+        const distance = this.getDistance(node, point);
+        return distance < range ? distance : null;
+    }
+
+    private getDistance = (node: SkillNode, point: IPoint): number => {
+        const diff = { x: node.x - point.x, y: node.y - point.y }
+        return diff.x * diff.x + diff.y * diff.y;
     }
 
     public addState = (node: SkillNode, state: SkillNodeStates) => this.addStateById(node.GetId(), state);

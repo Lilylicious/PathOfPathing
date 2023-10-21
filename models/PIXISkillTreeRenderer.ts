@@ -5,7 +5,7 @@ import { Assets } from '@pixi/assets';
 import { utils } from "../app/utils";
 import { SkillTreeEvents } from "./SkillTreeEvents";
 import { SkillNodeStates, SkillNode, ConnectionStyle } from "./SkillNode";
-import { SpatialHash } from 'pixi-cull';
+import { Cull } from '@pixi-essentials/cull';
 import { BaseSkillTreeRenderer, RenderLayer, IHighlight, ISpriteSheetAsset, IConnnection } from "./BaseSkillTreeRenderer";
 import { SemVer } from 'semver';
 import { versions } from './versions/verions';
@@ -16,7 +16,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
     private _dirty = true;
     private pixi: PIXI.Application<HTMLCanvasElement>;
     private viewport: Viewport;
-    private cull: SpatialHash;
+    private cull: Cull;
     private DO_NOT_CULL = [RenderLayer.Tooltip, RenderLayer.TooltipCompare];
     LayerContainers: { [layer in RenderLayer]: PIXI.Container } = {
         [RenderLayer.Background]: new PIXI.Container(),
@@ -51,7 +51,8 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         const version = skillTreeData.tree === 'Atlas' ? versions.v3_22_0_atlas : versions.v3_22_0;
 
         this.pixi = new PIXI.Application({
-            resizeTo: window,
+            width: window.innerWidth,
+            height: window.innerHeight,
             resolution: devicePixelRatio,
             sharedTicker: true,
             backgroundColor: skillTreeData.patch.compare(version) >= 0 ? 0x070b10 : 0x1a1411
@@ -69,8 +70,8 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
 
         const zoomPercent = this.skillTreeData.imageZoomLevels.length > 2 ? this.skillTreeData.imageZoomLevels[1] - this.skillTreeData.imageZoomLevels[0] : .1;
         this.viewport = new Viewport({
-            screenWidth: this.pixi.screen.width,
-            screenHeight: this.pixi.screen.height,
+            screenWidth: this.pixi.renderer.width,
+            screenHeight: this.pixi.renderer.height,
             worldWidth: this.skillTreeData.width * (this.skillTreeData.scale * 1.25),
             worldHeight: this.skillTreeData.height * (this.skillTreeData.scale * 1.25),
             events: this.pixi.renderer.events,
@@ -84,9 +85,9 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         this.viewport.fitWorld(true);
         this.viewport.zoomPercent(1.726);
 
-        this.viewport.on('pointerdown', (event) => SkillTreeEvents.viewport.fire("down", this.viewport.toLocal(event)));
-        this.viewport.on('pointermove', (event) => SkillTreeEvents.viewport.fire("move", this.viewport.toLocal(event)));
-        this.viewport.on('pointerup', (event) => SkillTreeEvents.viewport.fire("up", this.viewport.toLocal(event)));
+        this.viewport.on('pointerdown', (event) => SkillTreeEvents.viewport.fire("down", this.viewport.toWorld(event.global)));
+        this.viewport.on('pointermove', (event) => SkillTreeEvents.viewport.fire("move", this.viewport.toWorld(event.global)));
+        this.viewport.on('pointerup', (event) => SkillTreeEvents.viewport.fire("up", this.viewport.toWorld(event.global)));
         this.viewport.on('pointercancel', () => SkillTreeEvents.viewport.fire("cancel"));
 
         this.pixi.stage.addChild(this.viewport);
@@ -97,7 +98,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             this.viewport.clampZoom({ minWidth: this.skillTreeData.width * (zoomPercent / 8), minHeight: this.skillTreeData.height * (zoomPercent / 8) });
         };
 
-        this.cull = new SpatialHash({ size: 512 });
+        this.cull = new Cull();
         super.Tick();
     }
 
@@ -110,7 +111,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
     }
 
     Update(_: number): void {
-        this.cull.cull(this.viewport.getVisibleBounds());
+        this.cull.cull(this.pixi.renderer.screen);
         this.pixi.render();
         this._dirty = this.viewport.dirty = false;
     }
@@ -125,7 +126,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             const object = this.LayerContainers[layer];
 
             if (this.DO_NOT_CULL.indexOf(layer) === -1) {
-                this.cull.addContainer(object);
+                this.cull.add(object);
             }
 
             this.viewport.addChild(object);
@@ -139,11 +140,11 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
 
         const current = this.viewport.getChildAt(layer) as PIXI.Container;
         if (this.DO_NOT_CULL.indexOf(layer) === -1) {
-            this.cull.removeContainer(current);
+            this.cull.remove(current);
         }
 
         if (this.DO_NOT_CULL.indexOf(layer) === -1) {
-            this.cull.addContainer(object);
+            this.cull.add(object);
         }
 
         if (object === current) {
@@ -430,18 +431,32 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             return;
         }
 
-        let backgroundSprite: PIXI.Sprite = PIXI.Sprite.from(texture);
-        backgroundSprite.name = asset.icon;
         if (asset.icon === "AtlasPassiveBackground") {
+            let backgroundSprite: PIXI.Sprite = PIXI.Sprite.from(texture);
+            backgroundSprite.name = asset.icon;
             backgroundSprite.scale.set(2.8173)
-            backgroundSprite.anchor.set(.504, .918);
+            backgroundSprite.anchor.set(.506, .931);
+            container.addChild(backgroundSprite);
         } else {
             texture.baseTexture.wrapMode = PIXI.WRAP_MODES.REPEAT;
-            backgroundSprite = PIXI.TilingSprite.from(texture.baseTexture, { width: this.skillTreeData.width * (this.skillTreeData.scale * 1.25), height: this.skillTreeData.height * (this.skillTreeData.scale * 1.25) });
-            backgroundSprite.anchor.set(.5);
+            const columns = 10;
+            const rows = 10;
+            const width = this.skillTreeData.width * (this.skillTreeData.scale * 1.25);
+            const height = this.skillTreeData.height * (this.skillTreeData.scale * 1.25);
+            const cellWidth = width / columns;
+            const cellHeight = height / rows;
+            for (let row = 0; row < rows; row++) {
+                for (let column = 0; column < columns; column++) {
+                    const x = cellWidth * column - width / 2;
+                    const y = cellHeight * row - height / 2;
+                    let backgroundSprite: PIXI.Sprite = PIXI.Sprite.from(texture);
+                    backgroundSprite.name = `${asset.icon}-r:${row}-c:${column}`;
+                    backgroundSprite = PIXI.TilingSprite.from(texture.baseTexture, { width: cellWidth, height: cellHeight });
+                    backgroundSprite.position.set(x, y);
+                    container.addChild(backgroundSprite);
+                }
+            }
         }
-
-        container.addChild(backgroundSprite);
         this.SetLayer(layer, container);
     }
 
@@ -586,8 +601,8 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         this.SetLayer(layer, container);
     }
 
-    public CreateScreenshot = (mimeType: 'image/jpeg' | 'image/webp'): string => {
-        return this.pixi.renderer.plugins.extract.base64(this.viewport, mimeType, 1);
+    public CreateScreenshot = async (mimeType: 'image/jpeg' | 'image/webp'): Promise<string> => {
+        return await (this.pixi.renderer as any).extract.base64(this.viewport, mimeType, 1);
     }
 
     private GetSpritesheetTexture = (patch: SemVer, spriteSheetKey: string, icon: string): PIXI.Texture | null => {
