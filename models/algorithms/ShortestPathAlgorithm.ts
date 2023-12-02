@@ -56,14 +56,14 @@ export class ShortestPathAlgorithm implements IPathAlgorithm {
                     continue;
                 }
 
-                const expandedRange = treeData.tree === 'Atlas' ? 500 : 500;
-                if(out.x < treeData.desired_min_x - expandedRange
-                    || out.x > treeData.desired_max_x + expandedRange
-                    || out.y < treeData.desired_min_y - expandedRange
-                    || out.y > treeData.desired_max_y + expandedRange
-                    ){
-                        continue;
-                    }
+                // const expandedRange = treeData.tree === 'Atlas' ? 500 : 500;
+                // if(out.x < treeData.desired_min_x - expandedRange
+                //     || out.x > treeData.desired_max_x + expandedRange
+                //     || out.y < treeData.desired_min_y - expandedRange
+                //     || out.y > treeData.desired_max_y + expandedRange
+                //     ){
+                //         continue;
+                //     }
                 
                 let newDist = dist + (out.classStartIndex || out.is(SkillNodeStates.Desired) ? 0 : nodeDistanceWeights[id] ? nodeDistanceWeights[id] : 1);
 
