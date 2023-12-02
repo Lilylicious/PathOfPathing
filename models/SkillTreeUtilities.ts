@@ -288,6 +288,53 @@ export class SkillTreeUtilities {
         this.decodeImport(str)
     }
 
+    private wanderingPathButtonClick = () => {
+        let connectedMaps = 0;
+        for(const node of Object.values(this.skillTreeData.nodes)){
+            if(!node.is(SkillNodeStates.UnDesired) && !node.is(SkillNodeStates.Desired) && !node.isNotable && !node.isKeystone){
+                for(const stat of node.stats){
+                    if(connectedMaps < 100 && stat.indexOf('additional connected Map') !== -1){
+                        connectedMaps += 4;
+                        this.skillTreeData.addState(node, SkillNodeStates.Desired)
+                    }
+                    if(stat.indexOf('increased Quantity of Items found in your Maps') !== -1){
+                        this.skillTreeData.addState(node, SkillNodeStates.Desired)
+                    }
+                    if(stat.indexOf('increased effect of Modifiers on your Non-Unique Maps') !== -1){
+                        this.skillTreeData.addState(node, SkillNodeStates.Desired)
+                    }
+                }
+            }
+        }
+    }
+    private seventhGateClick = (rightclick: boolean) => {
+        const nodes = ['40933', '25648', '54197', '2017', '13842', '17000'];
+
+        if(rightclick){
+            for(const id of nodes){
+                const node = this.skillTreeData.nodes[id];
+                this.skillTreeData.removeState(node, SkillNodeStates.Desired);
+                this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
+            }
+            return;
+        }
+
+        for(const id of nodes){
+            const node = this.skillTreeData.nodes[id];
+            if (node.is(SkillNodeStates.Desired)) {
+                this.skillTreeData.removeState(node, SkillNodeStates.Desired);
+                this.skillTreeData.addState(node, SkillNodeStates.UnDesired);
+                
+            }
+            else if (node.is(SkillNodeStates.UnDesired)){
+                this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
+            }
+            else {
+                this.skillTreeData.addState(node, SkillNodeStates.Desired);
+            }
+        }
+    }
+
 
     private click = (node: SkillNode) => {
         //this.skillTreeData.clearState(SkillNodeStates.Highlighted)
@@ -305,6 +352,13 @@ export class SkillTreeUtilities {
 
         if(node.ascendancyName !== "" && Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.isAscendancyStart)[0].ascendancyName !== node.ascendancyName){
             return
+        }
+
+        if (this.skillTreeData.tree === "Atlas" && node.id === '40658' && !node.is(SkillNodeStates.Desired)){
+            //this.wanderingPathButtonClick()
+        }
+        if (this.skillTreeData.tree === "Atlas" && node.id === '41153'){
+            this.seventhGateClick(false);
         }
 
         if (this.skillTreeData.tree === "Atlas" && node.isMastery) {
@@ -366,6 +420,9 @@ export class SkillTreeUtilities {
 
     private rightclick = (node: SkillNode) => {
         //this.skillTreeData.clearState(SkillNodeStates.Highlighted)
+        if (this.skillTreeData.tree === "Atlas" && node.id === '41153'){
+            this.seventhGateClick(true);
+        }
         if (this.skillTreeData.tree === "Atlas" && node.isMastery) {
             let groups: Array<number> = []
             for (const id in this.skillTreeData.nodes) {
