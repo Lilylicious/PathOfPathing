@@ -130,7 +130,7 @@ export class SkillTreeUtilities {
     private lastHash = "";
     public decodeURL = (allocated: boolean) => {
         if(window.location.hash === ""){
-            this.changeStartClass(3, false);
+            this.changeStartClass(this.skillTreeData.getDefaultStartNode(), false);
         }
         if (this.lastHash === window.location.hash) {
             return;
