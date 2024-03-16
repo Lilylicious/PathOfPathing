@@ -421,7 +421,10 @@ export class SkillTreeUtilities {
                 }
             }
             for(const groupId of groups){
-                for(const nodeId of this.skillTreeData.groups[groupId].nodes){
+                let nodes = [...this.skillTreeData.groups[groupId].nodes]
+                if (groupId === 25) nodes.push('54499', '55003')
+                if (groupId === 127) nodes.push('9338','50203','5515')
+                for(const nodeId of nodes){
                     const node = this.skillTreeData.nodes[nodeId]
                     if(node.isNotable){                        
                         if (node.is(SkillNodeStates.Desired)) {
@@ -460,7 +463,7 @@ export class SkillTreeUtilities {
     private rightclick = (node: SkillNode) => {
         //this.skillTreeData.clearState(SkillNodeStates.Highlighted)
         if (this.skillTreeData.tree === "Atlas" && node.id === '41153'){
-            this.seventhGateClick(true);
+            this.seventhGateClick(true, node);
         }
         if (this.skillTreeData.tree === "Atlas" && node.isMastery) {
             let groups: Array<number> = []
@@ -483,7 +486,10 @@ export class SkillTreeUtilities {
                 }
             }
             for(const groupId of groups){
-                for(const nodeId of this.skillTreeData.groups[groupId].nodes){
+                let nodes = [...this.skillTreeData.groups[groupId].nodes]
+                if (groupId === 25) nodes.push('54499', '55003')
+                if (groupId === 127) nodes.push('9338','50203','5515')
+                for(const nodeId of nodes){
                     const node = this.skillTreeData.nodes[nodeId]
                     if(node.isNotable){                        
                         this.skillTreeData.removeState(node, SkillNodeStates.Desired);
