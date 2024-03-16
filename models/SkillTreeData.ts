@@ -11,6 +11,7 @@ export class SkillTreeData implements ISkillTreeData {
     version: number;
     masteryEffects: { [id: number]: number }
     classes: IAscendancyClasses[];
+    alternate_ascendancies: IAscendancyClassV7[];
     groups: { [id: string]: IGroup };
     root: ISkillNode;
     nodes: { [id: string]: SkillNode };
@@ -75,11 +76,13 @@ export class SkillTreeData implements ISkillTreeData {
         this.scale = skillTree.imageZoomLevels[this.maxZoomLevel];
         this.sprites = skillTree.sprites;
         this.classes = skillTree.classes || [];
+        this.alternate_ascendancies = skillTree.alternate_ascendancies || [];
 
         this.root.id = 'root';
         delete skillTree.nodes["root"];
 
         // #region Fix ascendancy groups
+        const offsetDistance = 1450;
         if (this.classes.length > 0) {
             const groupsCompleted: { [id: string]: boolean | undefined } = {};
             for (const id in skillTree.nodes) {
@@ -107,7 +110,7 @@ export class SkillTreeData implements ISkillTreeData {
                     if (startNode.classStartIndex !== undefined) {
                         const classes = this.classes[startNode.classStartIndex].ascendancies;
                         for (const i in classes) {
-                            if (node.ascendancyName && classes[i].name.toLowerCase().includes(node.ascendancyName.toLowerCase())) {
+                            if (node.ascendancyName && classes[i].id.toLowerCase().includes(node.ascendancyName.toLowerCase())) {
                                 offset = +i - 1;
                                 break;
                             }
@@ -115,7 +118,6 @@ export class SkillTreeData implements ISkillTreeData {
                     }
 
                     const centerThreshold = 100;
-                    const offsetDistance = 1450;
                     let baseX = 0;
                     let baseY = 0;
                     const startGroup = this.groups[startNode.group || 0];
@@ -159,6 +161,49 @@ export class SkillTreeData implements ISkillTreeData {
                 }
             }
         }
+
+        if (this.alternate_ascendancies.length > 0) {
+            const groupsCompleted: { [id: string]: boolean | undefined } = {};
+            for (const id in skillTree.nodes) {
+                const node = skillTree.nodes[id];
+                const nodeGroupId = `${node.group || 0}`;
+                if (!node.isAscendancyStart || groupsCompleted[nodeGroupId] !== undefined) {
+                    continue;
+                }
+
+                let index = -1;
+                for (const i in this.alternate_ascendancies) {
+                    const ascendancy = this.alternate_ascendancies[i];
+                    if (ascendancy.id === node.ascendancyName) {
+                        index = +i;
+                        break;
+                    }
+                }
+
+                if (index === -1) {
+                    continue;
+                }
+
+                const offset = index - 1;
+                const baseX = (this.max_x * .80) + (offset * -offsetDistance * .75);
+                const baseY = (this.max_y * .90) + (offset * offsetDistance * .75);
+                groupsCompleted[nodeGroupId] = true;
+                for (const oid in skillTree.nodes) {
+                    const other = skillTree.nodes[oid];
+                    const otherGroupId = `${other.group || 0}`;
+                    if (groupsCompleted[otherGroupId] === undefined && other.ascendancyName === node.ascendancyName) {
+                        const diffX = this.groups[nodeGroupId].x - this.groups[otherGroupId].x;
+                        const diffY = this.groups[nodeGroupId].y - this.groups[otherGroupId].y;
+                        this.groups[otherGroupId].x = baseX - diffX;
+                        this.groups[otherGroupId].y = baseY - diffY;
+                        groupsCompleted[otherGroupId] = true;
+                    }
+                }
+
+                this.groups[nodeGroupId].x = baseX;
+                this.groups[nodeGroupId].y = baseY;
+            }
+        }
         // #endregion
         this.grid = new SpatialHash([[this.min_x, this.min_y], [this.max_x, this.max_y]], [100, 100]);
         this.nodes = {};
@@ -168,13 +213,18 @@ export class SkillTreeData implements ISkillTreeData {
         for (const id in skillTree.nodes) {
             const groupId = skillTree.nodes[id].group || 0;
             const node = new SkillNode(id, skillTree.nodes[id], this.groups[groupId], skillTree.constants.orbitRadii, orbitAngles, this.scale, this.patch);
-            if (this.root.out.indexOf(id) >= 0 && node.classStartIndex === undefined) {
-                node.classStartIndex = this.root.out.indexOf(id);
+            if (this.root.out.indexOf(id) >= 0) {
+                if (node.classStartIndex === undefined && node.ascendancyName === "") {
+                    node.classStartIndex = this.root.out.indexOf(id);
+                }
+                if (node.ascendancyName !== "") {
+                    node.isAscendancyStart = true;
+                }
             }
 
             this.nodes[id] = node;
 
-            if (node.classStartIndex === 3) {
+            if (node.classStartIndex === this.getDefaultStartNode()) {
                 this.addState(node, SkillNodeStates.Active);
                 this.addState(node, SkillNodeStates.Desired);
             }
@@ -191,6 +241,13 @@ export class SkillTreeData implements ISkillTreeData {
                 this.grid.add(node.id, { x: node.x, y: node.y }, node.targetSize)
             }
         }
+    }
+
+    public getDefaultStartNode = (): number => {
+        if (this.tree === "Atlas") {
+            return 0;
+        }
+        return 3;
     }
 
     private shouldAddToGrid = (node: SkillNode): boolean => {
@@ -245,12 +302,12 @@ export class SkillTreeData implements ISkillTreeData {
     }
 
     public getAscendancyClass = (): number => {
+        if (this.classes === undefined || this.classes.length === 0) {
+            return 0;
+        }
+
         for (const id in this.ascendancyNodes) {
             if (this.nodes[id].isAscendancyStart && this.nodes[id].is(SkillNodeStates.Active)) {
-                if (this.classes === undefined) {
-                    continue;
-                }
-
                 for (const classid in this.classes) {
                     const ascendancies = this.classes[classid].ascendancies;
                     if (ascendancies === undefined) {
@@ -259,8 +316,8 @@ export class SkillTreeData implements ISkillTreeData {
 
                     for (const ascid in ascendancies) {
                         const asc = ascendancies[ascid];
-                        if (asc.name === this.nodes[id].name) {
-                            return +ascid;
+                        if (asc.id === this.nodes[id].ascendancyName) {
+                            return (+ascid) + 1;
                         }
                     }
                 }
@@ -268,6 +325,39 @@ export class SkillTreeData implements ISkillTreeData {
         }
 
         return 0;
+    }
+
+    public getWildwoodAscendancyClass = (): number => {
+        if (this.alternate_ascendancies === undefined || this.alternate_ascendancies.length === 0) {
+            return 0;
+        }
+
+        for (const id in this.ascendancyNodes) {
+            if (this.nodes[id].isAscendancyStart && this.nodes[id].is(SkillNodeStates.Active)) {
+                for (const ascid in this.alternate_ascendancies) {
+                    const asc = this.alternate_ascendancies[ascid];
+                    if (asc.id === this.nodes[id].ascendancyName) {
+                        return (+ascid) + 1;
+                    }
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    public isWildwoodAscendancyClass = (node: SkillNode): boolean => {
+        if (node.ascendancyName === "") {
+            return false;
+        }
+
+        for (const ascendancy of this.alternate_ascendancies) {
+            if (node.ascendancyName === ascendancy.id) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public getMasteryForGroup = (group: IGroup | undefined): SkillNode | null => {

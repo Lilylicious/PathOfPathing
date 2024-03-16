@@ -206,6 +206,9 @@ export class SkillNode implements ISkillNode {
             if (this.expansionJewel !== undefined || this.isProxy || this.nodeGroup?.isProxy) {
                 return `JewelSocketAlt${drawType}`;
             }
+            if (this.name === "Charm Socket") {
+                return `CharmFrame${drawType}`;
+            }
             return `JewelFrame${drawType}`;
         } else if (this.isKeystone) {
             return `KeystoneFrame${drawType}`;
