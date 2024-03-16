@@ -199,11 +199,13 @@ export class SkillTreeUtilities {
                 if (node.ascendancyName === "") {
                     normalNodes++;
                 } else {
-                    if (this.skillTreeData.isWildwoodAscendancyClass(node)) {
-                        wildwoodAscNodes++;
-                    } else {
-                        ascNodes++;
-                    }
+                    if(!node.isMultipleChoice) {
+                        if (this.skillTreeData.isWildwoodAscendancyClass(node)) {
+                            wildwoodAscNodes++;
+                        } else {
+                            ascNodes++;
+                        }
+                    }                    
                 }
                 maximumNormalPoints += node.grantedPassivePoints;
             }
