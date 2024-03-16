@@ -341,26 +341,24 @@ export class SkillTreeUtilities {
             }
         }
     }
-    private seventhGateClick = (rightclick: boolean) => {
-        const nodes = ['40933', '25648', '54197', '2017', '13842', '17000'];
+    private seventhGateClick = (rightclick: boolean, seventhGateNode: SkillNode) => {
+        const nodes = Object.values(this.skillTreeData.nodes).filter(filterNode => filterNode.isWormhole)
 
         if(rightclick){
-            for(const id of nodes){
-                const node = this.skillTreeData.nodes[id];
+            for(const node of nodes){
                 this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                 this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
             }
             return;
         }
 
-        for(const id of nodes){
-            const node = this.skillTreeData.nodes[id];
-            if (node.is(SkillNodeStates.Desired)) {
+        for(const node of nodes){
+            if (seventhGateNode.is(SkillNodeStates.Desired)) {
                 this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                 this.skillTreeData.addState(node, SkillNodeStates.UnDesired);
                 
             }
-            else if (node.is(SkillNodeStates.UnDesired)){
+            else if (seventhGateNode.is(SkillNodeStates.UnDesired)){
                 this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
             }
             else {
@@ -399,7 +397,7 @@ export class SkillTreeUtilities {
         // }
 
         if (this.skillTreeData.tree === "Atlas" && node.id === '41153'){
-            this.seventhGateClick(false);
+            this.seventhGateClick(false, node);
         }
 
         if (this.skillTreeData.tree === "Atlas" && node.isMastery) {
