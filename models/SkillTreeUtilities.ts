@@ -383,13 +383,20 @@ export class SkillTreeUtilities {
             return;
         }
 
-        if(node.ascendancyName !== "" && Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.isAscendancyStart)[0].ascendancyName !== node.ascendancyName){
+        const ascendancyStartNode = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
+        .filter(node => node.isAscendancyStart)
+        .filter(newNode => this.skillTreeData.isWildwoodAscendancyClass(node) == this.skillTreeData.isWildwoodAscendancyClass(newNode))
+        [0]
+
+        if(node.ascendancyName !== "" && ascendancyStartNode.ascendancyName !== node.ascendancyName){
             return
         }
 
-        if (this.skillTreeData.tree === "Atlas" && node.id === '40658' && !node.is(SkillNodeStates.Desired)){
-            //this.wanderingPathButtonClick()
-        }
+        //// Wandering path isn't as obvious what nodes you want. I'd want some sort of user selection of desired stats in order to provide this automation.
+        // if (this.skillTreeData.tree === "Atlas" && node.id === '40658' && !node.is(SkillNodeStates.Desired)){
+        //    this.wanderingPathButtonClick()
+        // }
+
         if (this.skillTreeData.tree === "Atlas" && node.id === '41153'){
             this.seventhGateClick(false);
         }
