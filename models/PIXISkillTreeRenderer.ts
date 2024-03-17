@@ -593,7 +593,19 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             graphic.name = `highlight-${highlight.node.id}`
             graphic.beginFill(0x000000, 0);
             graphic.lineStyle(5, highlight.color);
-            graphic.drawCircle(0, 0, Math.max(size.width, size.height) * .85);
+            if(highlight.node.is(SkillNodeStates.Desired)) graphic.drawCircle(0, 0, Math.max(size.width, size.height) * .85);
+            else if(highlight.node.is(SkillNodeStates.UnDesired)) {
+                // graphic.endFill();
+                // graphic.beginFill(0x800020, 0.5);
+                //graphic.drawRoundedRect(-size.width * 0.72, -size.height * 0.72, size.width / 0.68, size.width / 0.68, 1)
+                // graphic.endFill();
+                // graphic.beginFill(0x000000, 0);
+                graphic.lineStyle(7, highlight.color);
+                graphic.moveTo(-size.width * 0.7, -size.height * 0.7)
+                graphic.lineTo(size.width  * 0.7, size.height  * 0.7)
+                graphic.moveTo(-size.width * 0.7, size.height * 0.7)
+                graphic.lineTo(size.width  * 0.7, -size.height  * 0.7)
+            }
             graphic.endFill();
             graphic.position.set(highlight.node.x, highlight.node.y);
             container.addChild(graphic);
