@@ -104,6 +104,87 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
                 }
             }
         }
+
+
+        //Cull extra nodes
+        const requiredNodes: { [id: string]: SkillNode } = {};
+
+
+        //Find definitely required unbranching paths
+        let frontier = [...desiredNodesUnsorted]
+        const explored: { [id: string]: SkillNode } = {};
+        while (frontier.length > 0) {
+            const currentNode = frontier.shift();
+            if (currentNode === undefined) break;
+            explored[currentNode.GetId()] = currentNode
+            requiredNodes[currentNode.GetId()] = currentNode
+
+            const adjacent = [...new Set([...currentNode.out, ...currentNode.in])]
+            .filter(id => !explored[id])
+            .map(id => this.skillTreeData.nodes[id])
+            .filter(node => node.is(SkillNodeStates.Active))
+
+            //Abort path check when more than one path is found
+            if(adjacent.length > 1) continue;
+
+            for (const node of adjacent){
+                if(explored[node.GetId()]) continue;
+                frontier.push(node);
+            }
+        }
+
+        const startNodeIds = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
+        .filter(node => node.classStartIndex !== undefined)[0]?.out
+        .filter(nodeId => this.skillTreeData.nodes[nodeId].is(SkillNodeStates.Active))
+        .map(id => this.skillTreeData.nodes[id])
+
+        for(const start of startNodeIds) {
+            requiredNodes[start.GetId()] = start;
+        }
+
+        let notRequiredNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
+        .filter(node => !requiredNodes[node.GetId()])
+
+        for(const node of notRequiredNodes){
+            //console.log('Checking ' + node.GetId())
+            let frontier = [...startNodeIds]
+            const explored2: { [id: string]: SkillNode } = {};
+            while (frontier.length > 0) {
+                const currentNode = frontier.shift();
+                if (currentNode === undefined) break;
+                explored2[currentNode.GetId()] = currentNode
+
+                const adjacent = [...new Set([...currentNode.out, ...currentNode.in])]
+                .filter(id => !explored2[id])
+                .map(id => this.skillTreeData.nodes[id])
+                .filter(node => node.is(SkillNodeStates.Active))
+                .filter(adjacentNode => adjacentNode.GetId() !== node.GetId())
+
+                for (const node of adjacent){
+                    if(explored2[node.GetId()]) continue;
+                    frontier.unshift(node);
+                }
+            }
+
+            let allDesiredFound = true;
+            for(const desired of desiredNodesUnsorted){
+                if(!explored2[desired.GetId()]) {
+                    //console.log("Didn't find " + desired.GetId() + " because of " + node.GetId())
+                    allDesiredFound = false;
+                    break;
+                }
+            }
+
+            if(!allDesiredFound){
+                //console.log('Adding to required ' + node.GetId()) 
+                requiredNodes[node.GetId()] = node;
+            } else {
+                const yeeted = node;
+                if (yeeted === undefined) break;
+                this.skillTreeData.removeState(yeeted, SkillNodeStates.Active)
+                //console.log('Yeeted ' + yeeted?.GetId())
+            }
+        }
     }
 
     private adjustDesiredGroupDistances = (desiredNodes: Array<SkillNode>, adjustment: number): {[nodeId: string]: number} => {
