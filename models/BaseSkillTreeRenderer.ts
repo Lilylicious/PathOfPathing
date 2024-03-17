@@ -691,7 +691,7 @@ export enum HighlightColor {
     Removed = 0xFF0000,
     Moved = 0xFF1493,
     Searched = 0xB452FF,
-    Desired = 0x40E0D0,
+    Desired = 0x0fbd46,
     UnDesired = 0x800020,
 };
 
