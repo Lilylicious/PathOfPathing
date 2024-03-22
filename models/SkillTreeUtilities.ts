@@ -424,9 +424,11 @@ export class SkillTreeUtilities {
                 let nodes = [...this.skillTreeData.groups[groupId].nodes]
                 if (groupId === 25) nodes.push('54499', '55003')
                 if (groupId === 127) nodes.push('9338','50203','5515')
+
+                const notableException = ['3315','1444','44954','49699']
                 for(const nodeId of nodes){
                     const node = this.skillTreeData.nodes[nodeId]
-                    if(node.isNotable){                        
+                    if(node.isNotable || notableException.includes(nodeId)){                        
                         if (node.is(SkillNodeStates.Desired)) {
                             this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                             this.skillTreeData.addState(node, SkillNodeStates.UnDesired);
@@ -489,9 +491,12 @@ export class SkillTreeUtilities {
                 let nodes = [...this.skillTreeData.groups[groupId].nodes]
                 if (groupId === 25) nodes.push('54499', '55003')
                 if (groupId === 127) nodes.push('9338','50203','5515')
+
+                const notableException = ['3315','1444','44954','49699']
+
                 for(const nodeId of nodes){
                     const node = this.skillTreeData.nodes[nodeId]
-                    if(node.isNotable){                        
+                    if(node.isNotable || notableException.includes(nodeId)){                        
                         this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                         this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
                     }
