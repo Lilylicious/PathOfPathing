@@ -5,27 +5,27 @@ import { IPathAlgorithm } from "./IPathAlgorithm";
 import { FibonacciHeap } from 'mnemonist';
 
 export class ShortestPathAlgorithm implements IPathAlgorithm {
-    Execute(treeData: SkillTreeData, target: SkillNode, nodeDistanceWeights: {[nodeId: string]: number}, wantDebug: boolean): SkillNode[] {
+    Execute(treeData: SkillTreeData, target: SkillNode, nodeDistanceWeights: { [nodeId: string]: number }, wantDebug: boolean): SkillNode[] {
         //wantDebug = true
-        if (target.is(SkillNodeStates.Active)){
-            if(wantDebug) console.log('Early return 1')
+        if (target.is(SkillNodeStates.Active)) {
+            if (wantDebug) console.log('Early return 1')
             return new Array<SkillNode>;
         }
         if (target.isBlighted) {
-            if(wantDebug) console.log('Early return 2')
+            if (wantDebug) console.log('Early return 2')
             return new Array<SkillNode>(target);
         }
         let foundNode: SkillNode = target;
-        const frontier: FibonacciHeap<SkillNode> =  new FibonacciHeap((a,b) => {
+        const frontier: FibonacciHeap<SkillNode> = new FibonacciHeap((a, b) => {
             const aPrev = prev[a.id]
             const bPrev = prev[b.id]
-            if(aPrev === undefined || bPrev === undefined) return 0;
+            if (aPrev === undefined || bPrev === undefined) return 0;
             const aDist = distance[aPrev.id]
             const bDist = distance[bPrev.id]
-            if(aDist === undefined || bDist === undefined) return 0;
+            if (aDist === undefined || bDist === undefined) return 0;
 
-            if(aDist < bDist) return -1;
-            if(aDist > bDist) return 1;
+            if (aDist < bDist) return -1;
+            if (aDist > bDist) return 1;
             return 0;
         })
 
@@ -38,18 +38,18 @@ export class ShortestPathAlgorithm implements IPathAlgorithm {
         while (frontier.size > 0) {
             const current2 = frontier.pop();
             if (current2 === undefined) {
-                if(wantDebug) console.log('Early return 3')
+                if (wantDebug) console.log('Early return 3')
                 break;
             }
-            if(wantDebug) console.log('Current frontier ID', current2.GetId())
+            if (wantDebug) console.log('Current frontier ID', current2.GetId())
 
             explored[current2.GetId()] = current2;
             const dist = distance[current2.GetId()];
             let count = 0
             let adjacent = [...new Set([...current2.out, ...current2.in])]
             for (const id of adjacent) {
-                if(++count > 20) break;
-                if(wantDebug) console.log('Current out ID', id)
+                if (++count > 20) break;
+                if (wantDebug) console.log('Current out ID', id)
                 const out = treeData.nodes[id];
                 if ((current2.ascendancyName === "" && out.ascendancyName !== "" && !out.is(SkillNodeStates.Active))
                     || (current2.ascendancyName !== "" && out.ascendancyName === "" && !current2.is(SkillNodeStates.Active))) {
@@ -64,7 +64,7 @@ export class ShortestPathAlgorithm implements IPathAlgorithm {
                 //     ){
                 //         continue;
                 //     }
-                
+
                 let newDist = dist + (out.classStartIndex || out.is(SkillNodeStates.Desired) ? 0 : nodeDistanceWeights[id] ? nodeDistanceWeights[id] : 1);
 
                 if (explored[id] || (distance[id] && distance[id] < newDist)) {
@@ -73,21 +73,21 @@ export class ShortestPathAlgorithm implements IPathAlgorithm {
                 if ((out.classStartIndex !== undefined || out.isAscendancyStart) && !out.is(SkillNodeStates.Active)) {
                     continue;
                 }
-                
+
                 if (out.is(SkillNodeStates.UnDesired) || out.isMastery) {
                     continue;
                 }
-                
-                if(wantDebug && !out.isMastery) console.log('Adding out node to frontier')
+
+                if (wantDebug && !out.isMastery) console.log('Adding out node to frontier')
                 distance[id] = newDist;
-                if(wantDebug) console.log('Distance to out node', distance[id])
-                
+                if (wantDebug) console.log('Distance to out node', distance[id])
+
                 //// Enable the below line to see all the visited nodes
                 //treeData.addState(out, SkillNodeStates.Highlighted);
 
                 prev[id] = current2;
-                if(!out.isMastery) frontier.push(out);
-                if(wantDebug) console.log('Is out active?', out.is(SkillNodeStates.Active))
+                if (!out.isMastery) frontier.push(out);
+                if (wantDebug) console.log('Is out active?', out.is(SkillNodeStates.Active))
                 if (out.is(SkillNodeStates.Active)) {
                     frontier.clear()
                     foundNode = out;
@@ -96,7 +96,7 @@ export class ShortestPathAlgorithm implements IPathAlgorithm {
             }
         }
 
-        if(wantDebug) console.log('Found node', foundNode, foundNode === target, distance[foundNode.GetId()])
+        if (wantDebug) console.log('Found node', foundNode, foundNode === target, distance[foundNode.GetId()])
         if (foundNode === target || distance[foundNode.GetId()] === undefined) {
             return new Array<SkillNode>();
         }
@@ -109,7 +109,7 @@ export class ShortestPathAlgorithm implements IPathAlgorithm {
         return path.reverse();
     }
 
-    private getDistance(x1: number, y1: number, x2: number, y2: number){
+    private getDistance(x1: number, y1: number, x2: number, y2: number) {
         const x = x2 - x1
         const y = y2 - y1
 

@@ -10,7 +10,7 @@ export class SkillTreeUtilities {
     skillTreeData: SkillTreeData;
     skillTreeDataCompare: SkillTreeData | undefined;
     skillTreeCodec: SkillTreeCodec;
-    
+
     shortestPath: ShortestPathAlgorithm;
     allocationAlgorithm: AllocateNodesAlgorithm;
 
@@ -27,25 +27,25 @@ export class SkillTreeUtilities {
         this.shortestPath = new ShortestPathAlgorithm();
         this.allocationAlgorithm = new AllocateNodesAlgorithm(this.skillTreeData);
 
-        
-        if(this.skillTreeData.patch.compare(versions.v3_24_0_atlas) == 0) {
+
+        if (this.skillTreeData.patch.compare(versions.v3_24_0_atlas) == 0) {
             this.abyssGroup = 140;
             this.exarchGroup = 28;
         }
-        else if(this.skillTreeData.patch.compare(versions.v3_24_0_standard) == 0){                
+        else if (this.skillTreeData.patch.compare(versions.v3_24_0_standard) == 0) {
             this.abyssGroup = 136;
             this.exarchGroup = 25;
         }
-        else if(this.skillTreeData.patch.compare(versions.v3_23_0_atlas) == 0){                
+        else if (this.skillTreeData.patch.compare(versions.v3_23_0_atlas) == 0) {
             this.abyssGroup = 127;
             this.exarchGroup = 25;
         }
-        else if(this.skillTreeData.patch.compare(versions.v3_22_0_atlas) == 0){                
+        else if (this.skillTreeData.patch.compare(versions.v3_22_0_atlas) == 0) {
             this.abyssGroup = 126;
             this.exarchGroup = 25;
         }
 
-        this.notableException = ['3315','1444','44954','49699', '23485']
+        this.notableException = ['3315', '1444', '44954', '49699', '23485']
 
         SkillTreeEvents.node.on("click", this.click);
         SkillTreeEvents.node.on("in", this.mouseover);
@@ -62,13 +62,13 @@ export class SkillTreeUtilities {
     }
 
     private decodeImport = (str: string | undefined = undefined) => {
-        if(str === undefined) return;
+        if (str === undefined) return;
         const withoutDomain = str.replace('https://www.pathofexile.com/', '')
         const withoutTreeType = withoutDomain.replace('fullscreen-', '').replace('passive-skill-tree/', '').replace('atlas-skill-tree/', '')
-        
+
         const regex = /\d\.\d\d\.\d\//g
         const withoutVersion = withoutTreeType.replace(regex, '')
-        
+
         const regex2 = /\?accountName.*/g
         const data = withoutVersion.replace(regex2, '')
         try {
@@ -81,7 +81,7 @@ export class SkillTreeUtilities {
             this.changeStartClass(def.Class, false);
             this.changeAscendancyClass(def.Ascendancy - 1, false);
             const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired))
-            for (const node of nodesToDisable){
+            for (const node of nodesToDisable) {
                 this.skillTreeData.removeState(node, SkillNodeStates.Desired);
             }
 
@@ -93,15 +93,15 @@ export class SkillTreeUtilities {
                 if (node.classStartIndex === undefined) {
                     continue;
                 }
-    
+
                 if (node.classStartIndex !== def.Class) {
                     continue;
                 }
-    
+
                 rootNode = node
             }
 
-            if(rootNode === undefined){
+            if (rootNode === undefined) {
                 return
             }
             const nodesToFind = def.Nodes.map(node => node.skill);
@@ -109,9 +109,9 @@ export class SkillTreeUtilities {
 
             let adjacent = [...new Set([...rootNode.out, ...rootNode.in])].map(nodeString => Number(nodeString))
             adjacent = adjacent.filter(nodeId => nodesToFind.includes(nodeId) && !nodesFound.includes(nodeId))
-            while(adjacent.length > 0){
+            while (adjacent.length > 0) {
                 const nextNode = adjacent.shift();
-                if(nextNode === undefined){
+                if (nextNode === undefined) {
                     break;
                 }
                 nodesFound.push(nextNode)
@@ -120,23 +120,23 @@ export class SkillTreeUtilities {
             }
 
             for (const node of def.Nodes) {
-                if(!nodesFound.includes(node.skill)) continue;
-                if(node.isNotable || node.isKeystone || node.isJewelSocket || node.isAscendancyStart || node.classStartIndex !== undefined)
+                if (!nodesFound.includes(node.skill)) continue;
+                if (node.isNotable || node.isKeystone || node.isJewelSocket || node.isAscendancyStart || node.classStartIndex !== undefined)
                     this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
             }
-            
+
             for (const node of def.ExtendedNodes) {
-                if(!nodesFound.includes(node.skill)) continue;
-                if(node.isNotable || node.isKeystone || node.isJewelSocket || node.isAscendancyStart || node.classStartIndex !== undefined)
+                if (!nodesFound.includes(node.skill)) continue;
+                if (node.isNotable || node.isKeystone || node.isJewelSocket || node.isAscendancyStart || node.classStartIndex !== undefined)
                     this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
             }
 
             for (const [node, effect] of def.MasteryEffects) {
-                if(!nodesFound.includes(node.skill)) continue;
+                if (!nodesFound.includes(node.skill)) continue;
                 this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
                 this.skillTreeData.masteryEffects[node.skill] = effect;
             }
-            
+
             for (const node of def.Desired) {
                 this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
             }
@@ -155,7 +155,7 @@ export class SkillTreeUtilities {
 
     private lastHash = "";
     public decodeURL = (allocated: boolean) => {
-        if(window.location.hash === ""){
+        if (window.location.hash === "") {
             this.changeStartClass(this.skillTreeData.getDefaultStartNode(), false);
         }
         if (this.lastHash === window.location.hash) {
@@ -179,7 +179,7 @@ export class SkillTreeUtilities {
             for (const node of def.Nodes) {
                 this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Active)
             }
-            
+
             for (const node of def.ExtendedNodes) {
                 this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Active)
             }
@@ -188,7 +188,7 @@ export class SkillTreeUtilities {
                 this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Active)
                 this.skillTreeData.masteryEffects[node.skill] = effect;
             }
-            
+
             for (const node of def.Desired) {
                 this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
             }
@@ -230,7 +230,7 @@ export class SkillTreeUtilities {
                     } else {
                         ascNodes++;
                     }
-                                     
+
                 }
                 maximumNormalPoints += node.grantedPassivePoints;
             }
@@ -267,7 +267,7 @@ export class SkillTreeUtilities {
 
         if (encode) {
             window.location.hash = '#' + this.encodeURL(false);
-        }        
+        }
     }
 
     public changeAscendancyClass = (start: number, encode = true, newStart = false) => {
@@ -350,17 +350,17 @@ export class SkillTreeUtilities {
 
     private wanderingPathButtonClick = () => {
         let connectedMaps = 0;
-        for(const node of Object.values(this.skillTreeData.nodes)){
-            if(!node.is(SkillNodeStates.UnDesired) && !node.is(SkillNodeStates.Desired) && !node.isNotable && !node.isKeystone){
-                for(const stat of node.stats){
-                    if(connectedMaps < 100 && stat.indexOf('additional connected Map') !== -1){
+        for (const node of Object.values(this.skillTreeData.nodes)) {
+            if (!node.is(SkillNodeStates.UnDesired) && !node.is(SkillNodeStates.Desired) && !node.isNotable && !node.isKeystone) {
+                for (const stat of node.stats) {
+                    if (connectedMaps < 100 && stat.indexOf('additional connected Map') !== -1) {
                         connectedMaps += 4;
                         this.skillTreeData.addState(node, SkillNodeStates.Desired)
                     }
-                    if(stat.indexOf('increased Quantity of Items found in your Maps') !== -1){
+                    if (stat.indexOf('increased Quantity of Items found in your Maps') !== -1) {
                         this.skillTreeData.addState(node, SkillNodeStates.Desired)
                     }
-                    if(stat.indexOf('increased effect of Modifiers on your Non-Unique Maps') !== -1){
+                    if (stat.indexOf('increased effect of Modifiers on your Non-Unique Maps') !== -1) {
                         this.skillTreeData.addState(node, SkillNodeStates.Desired)
                     }
                 }
@@ -370,21 +370,21 @@ export class SkillTreeUtilities {
     private seventhGateClick = (rightclick: boolean, seventhGateNode: SkillNode) => {
         const nodes = Object.values(this.skillTreeData.nodes).filter(filterNode => filterNode.isWormhole)
 
-        if(rightclick){
-            for(const node of nodes){
+        if (rightclick) {
+            for (const node of nodes) {
                 this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                 this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
             }
             return;
         }
 
-        for(const node of nodes){
+        for (const node of nodes) {
             if (seventhGateNode.is(SkillNodeStates.Desired)) {
                 this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                 this.skillTreeData.addState(node, SkillNodeStates.UnDesired);
-                
+
             }
-            else if (seventhGateNode.is(SkillNodeStates.UnDesired)){
+            else if (seventhGateNode.is(SkillNodeStates.UnDesired)) {
                 this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
             }
             else {
@@ -409,11 +409,11 @@ export class SkillTreeUtilities {
         }
 
         const ascendancyStartNode = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
-        .filter(node => node.isAscendancyStart)
-        .filter(newNode => this.skillTreeData.isWildwoodAscendancyClass(node) == this.skillTreeData.isWildwoodAscendancyClass(newNode))
+            .filter(node => node.isAscendancyStart)
+            .filter(newNode => this.skillTreeData.isWildwoodAscendancyClass(node) == this.skillTreeData.isWildwoodAscendancyClass(newNode))
         [0]
 
-        if(node.ascendancyName !== "" && ascendancyStartNode.ascendancyName !== node.ascendancyName){
+        if (node.ascendancyName !== "" && ascendancyStartNode.ascendancyName !== node.ascendancyName) {
             return
         }
 
@@ -422,7 +422,7 @@ export class SkillTreeUtilities {
         //    this.wanderingPathButtonClick()
         // }
 
-        if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.id === '41153'){
+        if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.id === '41153') {
             this.seventhGateClick(false, node);
         }
 
@@ -442,24 +442,24 @@ export class SkillTreeUtilities {
                     continue;
                 }
 
-                if(!groups.includes(other.group)){
+                if (!groups.includes(other.group)) {
                     groups.push(other.group)
                 }
             }
 
-            for(const groupId of groups){
+            for (const groupId of groups) {
                 let nodes = [...this.skillTreeData.groups[groupId].nodes]
                 if (groupId === this.exarchGroup) nodes.push('54499', '55003')
-                if (groupId === this.abyssGroup) nodes.push('9338','50203','5515')
+                if (groupId === this.abyssGroup) nodes.push('9338', '50203', '5515')
 
-                for(const nodeId of nodes){
+                for (const nodeId of nodes) {
                     const node = this.skillTreeData.nodes[nodeId]
-                    if(node.isNotable || this.notableException.includes(nodeId)){                        
+                    if (node.isNotable || this.notableException.includes(nodeId)) {
                         if (node.is(SkillNodeStates.Desired)) {
                             this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                             this.skillTreeData.addState(node, SkillNodeStates.UnDesired);
                         }
-                        else if (node.is(SkillNodeStates.UnDesired)){
+                        else if (node.is(SkillNodeStates.UnDesired)) {
                             this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
                         }
                         else if (!node.isMastery) {
@@ -470,12 +470,12 @@ export class SkillTreeUtilities {
                 }
             }
         }
-        else{
+        else {
             if (node.is(SkillNodeStates.Desired)) {
                 this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                 this.skillTreeData.addState(node, SkillNodeStates.UnDesired);
             }
-            else if (node.is(SkillNodeStates.UnDesired)){
+            else if (node.is(SkillNodeStates.UnDesired)) {
                 this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
             }
             else {
@@ -483,14 +483,14 @@ export class SkillTreeUtilities {
             }
             SkillTreeEvents.skill_tree.fire("highlighted-nodes-update");
         }
-        
-        
+
+
         this.allocateNodes();
     }
 
     private rightclick = (node: SkillNode) => {
         //this.skillTreeData.clearState(SkillNodeStates.Highlighted)
-        if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.id === '41153'){
+        if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.id === '41153') {
             this.seventhGateClick(true, node);
         }
         if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.isMastery) {
@@ -509,25 +509,25 @@ export class SkillTreeUtilities {
                     continue;
                 }
 
-                if(!groups.includes(other.group)){
+                if (!groups.includes(other.group)) {
                     groups.push(other.group)
                 }
             }
-            for(const groupId of groups){
+            for (const groupId of groups) {
                 let nodes = [...this.skillTreeData.groups[groupId].nodes]
                 if (groupId === this.exarchGroup) nodes.push('54499', '55003')
-                if (groupId === this.abyssGroup) nodes.push('9338','50203','5515')
+                if (groupId === this.abyssGroup) nodes.push('9338', '50203', '5515')
 
-                for(const nodeId of nodes){
+                for (const nodeId of nodes) {
                     const node = this.skillTreeData.nodes[nodeId]
-                    if(node.isNotable || this.notableException.includes(nodeId)){                        
+                    if (node.isNotable || this.notableException.includes(nodeId)) {
                         this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                         this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
                     }
                 }
             }
         }
-        else{
+        else {
             this.skillTreeData.removeState(node, SkillNodeStates.Desired);
             this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
         }
