@@ -608,6 +608,9 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
                 graphic.moveTo(-size.width * 0.7, size.height * 0.7)
                 graphic.lineTo(size.width  * 0.7, -size.height  * 0.7)
             }
+            else {
+                graphic.drawRoundedRect(-size.width * 0.72, -size.height * 0.72, size.width / 0.68, size.width / 0.68, 1)
+            }
             graphic.endFill();
             graphic.position.set(highlight.node.x, highlight.node.y);
             container.addChild(graphic);
