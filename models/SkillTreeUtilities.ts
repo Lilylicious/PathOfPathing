@@ -16,6 +16,7 @@ export class SkillTreeUtilities {
 
     abyssGroup = 0;
     exarchGroup = 0;
+    notableException: string[];
 
 
     constructor(context: SkillTreeData, contextComapre: SkillTreeData | undefined) {
@@ -43,6 +44,8 @@ export class SkillTreeUtilities {
             this.abyssGroup = 126;
             this.exarchGroup = 25;
         }
+
+        this.notableException = ['3315','1444','44954','49699', '23485']
 
         SkillTreeEvents.node.on("click", this.click);
         SkillTreeEvents.node.on("in", this.mouseover);
@@ -449,10 +452,9 @@ export class SkillTreeUtilities {
                 if (groupId === this.exarchGroup) nodes.push('54499', '55003')
                 if (groupId === this.abyssGroup) nodes.push('9338','50203','5515')
 
-                const notableException = ['3315','1444','44954','49699']
                 for(const nodeId of nodes){
                     const node = this.skillTreeData.nodes[nodeId]
-                    if(node.isNotable || notableException.includes(nodeId)){                        
+                    if(node.isNotable || this.notableException.includes(nodeId)){                        
                         if (node.is(SkillNodeStates.Desired)) {
                             this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                             this.skillTreeData.addState(node, SkillNodeStates.UnDesired);
@@ -516,11 +518,9 @@ export class SkillTreeUtilities {
                 if (groupId === this.exarchGroup) nodes.push('54499', '55003')
                 if (groupId === this.abyssGroup) nodes.push('9338','50203','5515')
 
-                const notableException = ['3315','1444','44954','49699']
-
                 for(const nodeId of nodes){
                     const node = this.skillTreeData.nodes[nodeId]
-                    if(node.isNotable || notableException.includes(nodeId)){                        
+                    if(node.isNotable || this.notableException.includes(nodeId)){                        
                         this.skillTreeData.removeState(node, SkillNodeStates.Desired);
                         this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
                     }
