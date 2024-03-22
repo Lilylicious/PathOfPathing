@@ -122,10 +122,6 @@ export class SkillNode implements ISkillNode {
         this.isRegular1 = this.isRegular2 && (this.grantedStrength > 0 || this.grantedDexterity > 0 || this.grantedIntelligence > 0) && this.stats.filter(utils.NotNullOrWhiteSpace).length === 1;
         this.targetSize = this.getTargetSize();
         this.patch = patch;
-
-        if (this.grantedPassivePoints > 0 && this.skill !== 65225) {
-            this.stats.push(`Grants ${this.grantedPassivePoints} Passive Skill Point${this.grantedPassivePoints > 1 ? 's' : ''}`);
-        }
     }
 
     private getArc = (oidx: number): number => this.orbitAngles[this.orbit] !== undefined && this.orbitAngles[this.orbit].length > oidx ? this.orbitAngles[this.orbit][oidx] : 0;
