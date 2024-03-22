@@ -34,6 +34,7 @@ export class SkillTreeEvents {
         | "class-change"
         | "search-change"
         | "import-change"
+        | "pause-change"
     >();
 
     public static skill_tree = new SkillTreeEventContainer<

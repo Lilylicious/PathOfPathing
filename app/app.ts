@@ -112,6 +112,16 @@ export class App {
             }
         });
 
+        const pause = document.getElementById('skillTreeControl_Pause') as HTMLInputElement;
+        pause.addEventListener("click", () => {
+            if (pause.innerText == "Pause Allocation") {
+                pause.innerText = "Unpause Allocation";
+            } else {
+                pause.innerText = "Pause Allocation";
+            }
+            SkillTreeEvents.controls.fire("pause-change");
+        });
+
         const container = document.getElementById("skillTreeContainer");
         if (container !== null) {
             this.renderer = new PIXISkillTreeRenderer(container, this.skillTreeData, this.skillTreeDataCompare);

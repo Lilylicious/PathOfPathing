@@ -17,6 +17,7 @@ export class SkillTreeUtilities {
     abyssGroup = 0;
     exarchGroup = 0;
     notableException: string[];
+    pause = false;
 
 
     constructor(context: SkillTreeData, contextComapre: SkillTreeData | undefined) {
@@ -59,6 +60,10 @@ export class SkillTreeUtilities {
 
         SkillTreeEvents.controls.on("import-change", this.importChange);
         SkillTreeEvents.skill_tree.on("encode-url", this.encodeURL);
+        SkillTreeEvents.controls.on("pause-change", () => {
+            this.pause = !this.pause;
+            this.allocateNodes();
+        });
     }
 
     private decodeImport = (str: string | undefined = undefined) => {
@@ -536,6 +541,8 @@ export class SkillTreeUtilities {
     }
 
     public allocateNodes = () => {
+        if(this.pause) return;
+
         //console.time('Execution time')
         this.allocationAlgorithm.Execute(this.shortestPath);
         //console.timeEnd('Execution time')
