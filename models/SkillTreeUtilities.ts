@@ -14,6 +14,10 @@ export class SkillTreeUtilities {
     shortestPath: ShortestPathAlgorithm;
     allocationAlgorithm: AllocateNodesAlgorithm;
 
+    abyssGroup = 0;
+    exarchGroup = 0;
+
+
     constructor(context: SkillTreeData, contextComapre: SkillTreeData | undefined) {
         this.skillTreeData = context;
         this.skillTreeDataCompare = contextComapre;
@@ -21,6 +25,24 @@ export class SkillTreeUtilities {
 
         this.shortestPath = new ShortestPathAlgorithm();
         this.allocationAlgorithm = new AllocateNodesAlgorithm(this.skillTreeData);
+
+        
+        if(this.skillTreeData.patch.compare(versions.v3_24_0_atlas) == 0) {
+            this.abyssGroup = 140;
+            this.exarchGroup = 28;
+        }
+        else if(this.skillTreeData.patch.compare(versions.v3_24_0_standard) == 0){                
+            this.abyssGroup = 136;
+            this.exarchGroup = 25;
+        }
+        else if(this.skillTreeData.patch.compare(versions.v3_23_0_atlas) == 0){                
+            this.abyssGroup = 127;
+            this.exarchGroup = 25;
+        }
+        else if(this.skillTreeData.patch.compare(versions.v3_22_0_atlas) == 0){                
+            this.abyssGroup = 126;
+            this.exarchGroup = 25;
+        }
 
         SkillTreeEvents.node.on("click", this.click);
         SkillTreeEvents.node.on("in", this.mouseover);
@@ -421,12 +443,11 @@ export class SkillTreeUtilities {
                     groups.push(other.group)
                 }
             }
-            const necropolisOrLater = this.skillTreeData.patch.compare(versions.v3_24_0_atlas) >= 0;
-            const standardNecropolis = this.skillTreeData.patch.compare(versions.v3_24_0_standard) == 0;
+
             for(const groupId of groups){
                 let nodes = [...this.skillTreeData.groups[groupId].nodes]
-                if (groupId === (necropolisOrLater ? 28 : 25)) nodes.push('54499', '55003')
-                if (groupId === (standardNecropolis ? 140 : (necropolisOrLater ? 136 : 127))) nodes.push('9338','50203','5515')
+                if (groupId === this.exarchGroup) nodes.push('54499', '55003')
+                if (groupId === this.abyssGroup) nodes.push('9338','50203','5515')
 
                 const notableException = ['3315','1444','44954','49699']
                 for(const nodeId of nodes){
@@ -490,12 +511,10 @@ export class SkillTreeUtilities {
                     groups.push(other.group)
                 }
             }
-            const necropolisOrLater = this.skillTreeData.patch.compare(versions.v3_24_0_atlas) >= 0;
-            const standardNecropolis = this.skillTreeData.patch.compare(versions.v3_24_0_standard) == 0;
             for(const groupId of groups){
                 let nodes = [...this.skillTreeData.groups[groupId].nodes]
-                if (groupId === (necropolisOrLater ? 28 : 25)) nodes.push('54499', '55003')
-                if (groupId === (standardNecropolis ? 140 : (necropolisOrLater ? 136 : 127))) nodes.push('9338','50203','5515')
+                if (groupId === this.exarchGroup) nodes.push('54499', '55003')
+                if (groupId === this.abyssGroup) nodes.push('9338','50203','5515')
 
                 const notableException = ['3315','1444','44954','49699']
 
