@@ -59,11 +59,13 @@ export class SkillTreeUtilities {
         SkillTreeEvents.controls.on("search-change", this.searchChange);
 
         SkillTreeEvents.controls.on("import-change", this.importChange);
-        SkillTreeEvents.skill_tree.on("encode-url", this.encodeURL);
         SkillTreeEvents.controls.on("pause-change", () => {
             this.pause = !this.pause;
-            this.allocateNodes();
+            this.allocateNodes(false);
         });
+        SkillTreeEvents.skill_tree.on("recalculate", this.allocateNodes);
+        SkillTreeEvents.skill_tree.on("encode-url", this.encodeURL);
+
     }
 
     private decodeImport = (str: string | undefined = undefined) => {
@@ -150,7 +152,7 @@ export class SkillTreeUtilities {
             }
             window.location.hash = '#' + this.encodeURL(false);
 
-            this.allocateNodes();
+            this.allocateNodes(false);
         }
         catch (ex) {
             //window.location.hash = "";
@@ -268,7 +270,7 @@ export class SkillTreeUtilities {
         }
         this.changeAscendancyClass(0, false, true);
         this.changeWildwoodAscendancyClass(0, false, true);
-        this.allocateNodes();
+        this.allocateNodes(false);
 
         if (encode) {
             window.location.hash = '#' + this.encodeURL(false);
@@ -490,7 +492,7 @@ export class SkillTreeUtilities {
         }
 
 
-        this.allocateNodes();
+        this.allocateNodes(false);
     }
 
     private rightclick = (node: SkillNode) => {
@@ -536,12 +538,12 @@ export class SkillTreeUtilities {
             this.skillTreeData.removeState(node, SkillNodeStates.Desired);
             this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
         }
-        this.allocateNodes();
+        this.allocateNodes(false);
         SkillTreeEvents.skill_tree.fire("highlighted-nodes-update");
     }
 
-    public allocateNodes = () => {
-        if(this.pause) return;
+    public allocateNodes = (recalculated: boolean) => {
+        if (!recalculated && this.pause) return;
 
         //console.time('Execution time')
         this.allocationAlgorithm.Execute(this.shortestPath);

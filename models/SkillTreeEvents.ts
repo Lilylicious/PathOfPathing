@@ -52,6 +52,7 @@ export class SkillTreeEvents {
         | "hovered-nodes-start"
         | "normal-node-count-maximum"
         | "normal-node-count"
+        | "recalculate"
     >();
 
     public static node = new SkillTreeEventContainer<

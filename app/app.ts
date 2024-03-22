@@ -111,16 +111,25 @@ export class App {
                 showhide.innerText = "Hide";
             }
         });
+        
+        const recalculate = document.getElementById('skillTreeControl_Recalculate') as HTMLInputElement;
+        recalculate.addEventListener("click", () => {
+            SkillTreeEvents.skill_tree.fire("recalculate", true);
+        });
 
         const pause = document.getElementById('skillTreeControl_Pause') as HTMLInputElement;
         pause.addEventListener("click", () => {
             if (pause.innerText == "Pause Allocation") {
                 pause.innerText = "Unpause Allocation";
+                recalculate.style.setProperty('display', 'inline')
             } else {
                 pause.innerText = "Pause Allocation";
+                recalculate.style.setProperty('display', 'none')
             }
             SkillTreeEvents.controls.fire("pause-change");
         });
+
+        
 
         const container = document.getElementById("skillTreeContainer");
         if (container !== null) {
@@ -130,7 +139,7 @@ export class App {
                     this.SetupEventsAndControls();
                     this.renderer.RenderBase();
                     this.skillTreeUtilities.decodeURL(false);
-                    this.skillTreeUtilities.allocateNodes();
+                    this.skillTreeUtilities.allocateNodes(false);
                     this.renderer.RenderCharacterStartsActive();
                     this.renderer.RenderActive();
                 })
