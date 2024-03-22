@@ -123,7 +123,7 @@ export class SkillNode implements ISkillNode {
         this.targetSize = this.getTargetSize();
         this.patch = patch;
 
-        if (this.grantedPassivePoints > 0) {
+        if (this.grantedPassivePoints > 0 && this.skill !== 65225) {
             this.stats.push(`Grants ${this.grantedPassivePoints} Passive Skill Point${this.grantedPassivePoints > 1 ? 's' : ''}`);
         }
     }
