@@ -4,6 +4,7 @@ import { SkillTreeEvents } from "./SkillTreeEvents";
 import { SkillTreeCodec } from "./url-processing/SkillTreeCodec";
 import { ShortestPathAlgorithm } from "./algorithms/ShortestPathAlgorithm"
 import { AllocateNodesAlgorithm } from "./algorithms/AllocateNodesAlgorithm"
+import { versions } from "./versions/verions";
 
 export class SkillTreeUtilities {
     skillTreeData: SkillTreeData;
@@ -420,10 +421,12 @@ export class SkillTreeUtilities {
                     groups.push(other.group)
                 }
             }
+            const necropolisOrLater = this.skillTreeData.patch.compare(versions.v3_24_0_atlas) >= 0;
+            const standardNecropolis = this.skillTreeData.patch.compare(versions.v3_24_0_standard) == 0;
             for(const groupId of groups){
                 let nodes = [...this.skillTreeData.groups[groupId].nodes]
-                if (groupId === 25) nodes.push('54499', '55003')
-                if (groupId === 127) nodes.push('9338','50203','5515')
+                if (groupId === (necropolisOrLater ? 28 : 25)) nodes.push('54499', '55003')
+                if (groupId === (standardNecropolis ? 140 : (necropolisOrLater ? 136 : 127))) nodes.push('9338','50203','5515')
 
                 const notableException = ['3315','1444','44954','49699']
                 for(const nodeId of nodes){
@@ -487,10 +490,12 @@ export class SkillTreeUtilities {
                     groups.push(other.group)
                 }
             }
+            const necropolisOrLater = this.skillTreeData.patch.compare(versions.v3_24_0_atlas) >= 0;
+            const standardNecropolis = this.skillTreeData.patch.compare(versions.v3_24_0_standard) == 0;
             for(const groupId of groups){
                 let nodes = [...this.skillTreeData.groups[groupId].nodes]
-                if (groupId === 25) nodes.push('54499', '55003')
-                if (groupId === 127) nodes.push('9338','50203','5515')
+                if (groupId === (necropolisOrLater ? 28 : 25)) nodes.push('54499', '55003')
+                if (groupId === (standardNecropolis ? 140 : (necropolisOrLater ? 136 : 127))) nodes.push('9338','50203','5515')
 
                 const notableException = ['3315','1444','44954','49699']
 
