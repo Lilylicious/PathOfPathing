@@ -396,11 +396,11 @@ export class SkillTreeUtilities {
         //    this.wanderingPathButtonClick()
         // }
 
-        if (this.skillTreeData.tree === "Atlas" && node.id === '41153'){
+        if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.id === '41153'){
             this.seventhGateClick(false, node);
         }
 
-        if (this.skillTreeData.tree === "Atlas" && node.isMastery) {
+        if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.isMastery) {
             let groups: Array<number> = []
             for (const id in this.skillTreeData.nodes) {
                 const other = this.skillTreeData.nodes[id];
@@ -462,10 +462,10 @@ export class SkillTreeUtilities {
 
     private rightclick = (node: SkillNode) => {
         //this.skillTreeData.clearState(SkillNodeStates.Highlighted)
-        if (this.skillTreeData.tree === "Atlas" && node.id === '41153'){
+        if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.id === '41153'){
             this.seventhGateClick(true, node);
         }
-        if (this.skillTreeData.tree === "Atlas" && node.isMastery) {
+        if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.isMastery) {
             let groups: Array<number> = []
             for (const id in this.skillTreeData.nodes) {
                 const other = this.skillTreeData.nodes[id];
@@ -528,7 +528,7 @@ export class SkillTreeUtilities {
             } else {
                 this.skillTreeData.addState(node, SkillNodeStates.Hovered);
 
-                if (this.skillTreeData.tree === "Atlas" && node.isMastery) {
+                if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.isMastery) {
                     for (const id in this.skillTreeData.nodes) {
                         const other = this.skillTreeData.nodes[id];
                         if (!other.isMastery) {

@@ -133,6 +133,8 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
             }
         }
 
+        if(Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).length <= 1) return;
+
         const startNodeIds = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
         .filter(node => node.classStartIndex !== undefined)[0]?.out
         .filter(nodeId => this.skillTreeData.nodes[nodeId].is(SkillNodeStates.Active))

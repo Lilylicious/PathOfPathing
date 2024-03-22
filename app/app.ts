@@ -45,7 +45,6 @@ export class App {
         this.skillTreeUtilities = new SkillTreeUtilities(this.skillTreeData, this.skillTreeDataCompare);
 
         const versionSelect = document.getElementById("skillTreeControl_Version") as HTMLSelectElement;
-        //const compareSelect = document.getElementById("skillTreeControl_VersionCompare") as HTMLSelectElement;
         for (const ver of versionJson.versions) {
             const v = document.createElement("option");
             v.text = v.value = ver;
@@ -59,7 +58,6 @@ export class App {
             if (ver === versionCompare) {
                 c.setAttribute('selected', 'selected');
             }
-            //compareSelect.appendChild(c);
         }
         versionSelect.onchange = () => {
             const version = versionSelect.value !== '0' ? versionSelect.value : '';
@@ -72,14 +70,6 @@ export class App {
                 controls[i].style.removeProperty('display');
             }
         }
-
-        // const go = document.getElementById("skillTreeControl_VersionGo") as HTMLButtonElement;
-        // go.addEventListener("click", () => {
-        //     const version = versionSelect.value !== '0' ? versionSelect.value : '';
-        //     const compare = compareSelect.value !== '0' ? compareSelect.value : '';
-        //     App.ChangeSkillTreeVersion(version, compare, "");
-        // });
-
 
         const reset = document.getElementById("skillTreeControl_Reset") as HTMLButtonElement;
         reset.addEventListener("click", () => {
@@ -104,7 +94,7 @@ export class App {
         const exportElement = document.getElementById("skillTreeControl_Export") as HTMLButtonElement;
         exportElement.addEventListener("click", () => {
             const passiveCode = this.skillTreeUtilities.encodeURL(true)
-            const prefix = 'https://www.pathofexile.com/fullscreen-' + (this.skillTreeData.tree === 'Atlas' ? 'atlas' : 'passive') + '-skill-tree/'
+            const prefix = 'https://www.pathofexile.com/fullscreen-' + (this.skillTreeData.tree.slice(0,5) === 'Atlas' ? 'atlas' : 'passive') + '-skill-tree/'
             const url = prefix + passiveCode
             navigator.clipboard.writeText(url);
         });
@@ -133,13 +123,6 @@ export class App {
                     this.skillTreeUtilities.allocateNodes();
                     this.renderer.RenderCharacterStartsActive();
                     this.renderer.RenderActive();
-
-                    // const screenshot = document.getElementById("skillTreeControl_Screenshot") as HTMLSelectElement;
-                    // screenshot.style.removeProperty('display');
-                    // screenshot.addEventListener("click", async () => {
-                    //     const mimeType: 'image/jpeg' = 'image/jpeg';
-                    //     utils.Download(await this.renderer.CreateScreenshot(mimeType), `${version.replace(/\./g, '')}_skilltree.jpg`, mimeType);
-                    // });
                 })
                 .catch((reason) => console.error(reason));
         }
@@ -175,8 +158,7 @@ export class App {
 
     private PreGenerateShortestDistances = (file, sourceNodes, destinationNodes) => {
         let verbose = false
-        if(file.tree === 'Default')
-        return;
+        
         const nodes = file.nodes
         console.log('Shortest distances started')
         for (const nodeId in nodes){
@@ -198,12 +180,12 @@ export class App {
                 continue;
             }
             
-            // if(file.tree === 'Atlas' && nodes[sourceId].isMastery !== 'undefined'){
+            // if(file.tree.slice(0,5) === 'Atlas' && nodes[sourceId].isMastery !== 'undefined'){
             //     console.log('Skipping mastery')
             //     continue;
             // }
             //const sourceId = 6
-            if (file.tree !== 'Atlas' && nodes[sourceId].ascendancyName !== undefined){
+            if (file.tree.slice(0,5) !== 'Atlas' && nodes[sourceId].ascendancyName !== undefined){
                 continue;
             }      
 
@@ -354,7 +336,7 @@ export class App {
     }
 
     private updateStats = () => {
-        const defaultGroup = this.skillTreeData.tree === "Atlas" ? "Maps" : "Default";
+        const defaultGroup = this.skillTreeData.tree.slice(0, 5) === "Atlas" ? "Maps" : "Default";
         const [masteries, masteryTest, defaultStats] = this.buildStatLookups(defaultGroup);
 
         const groups: { [group: string]: string[] } = {};
@@ -703,7 +685,7 @@ export class App {
         }
         
         const classControl = document.getElementById("skillTreeControl_Class") as HTMLSelectElement
-        if(version.slice(-5) === 'atlas'){
+        if(version.slice(-5) === 'atlas' || version.slice(-8) === 'standard' ){
             classControl.style.visibility = 'hidden'
         } else {
             classControl.style.visibility = 'visible'

@@ -6,7 +6,7 @@ import { ISkillTreeData } from "./types/ISkillTreeData";
 import { SpatialHash } from "./spatial-hash/SpatialHash";
 
 export class SkillTreeData implements ISkillTreeData {
-    tree: "Default" | "Royale" | "Atlas";
+    tree: "Default" | "Royale" | "Atlas" | "AtlasNecropolis";
     patch: SemVer;
     version: number;
     masteryEffects: { [id: number]: number }
@@ -244,7 +244,7 @@ export class SkillTreeData implements ISkillTreeData {
     }
 
     public getDefaultStartNode = (): number => {
-        if (this.tree === "Atlas") {
+        if (this.tree.slice(0, 5) === "Atlas") {
             return 0;
         }
         return 3;

@@ -48,7 +48,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         super(container, skillTreeData, skillTreeDataCompare);
         this.NodeTooltips = {};
         this.NodeSpritesheets = {};
-        const version = skillTreeData.tree === 'Atlas' ? versions.v3_22_0_atlas : versions.v3_22_0;
+        const version = skillTreeData.tree.slice(0,5) === 'Atlas' ? versions.v3_22_0_atlas : versions.v3_22_0;
 
         this.pixi = new PIXI.Application({
             width: window.innerWidth,
