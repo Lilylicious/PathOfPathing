@@ -83,7 +83,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         this.viewport.name = 'viewport';
         this.viewport.drag().wheel({ percent: zoomPercent }).pinch({ percent: zoomPercent * 10 });
         this.viewport.clampZoom(defaultZoomLimits);
-        if(skillTreeData.tree === 'Atlas') this.viewport.moveCenter(this.viewport.center.x * (zoomPercent / 2), this.viewport.center.y * (zoomPercent / 2) - 2000 )
+        if(skillTreeData.tree.slice(0, 5) === 'Atlas') this.viewport.moveCenter(this.viewport.center.x * (zoomPercent / 2), this.viewport.center.y * (zoomPercent / 2) - 2000 )
         this.viewport.fitWorld(true);
         this.viewport.zoomPercent(1.726);
 
