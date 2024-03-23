@@ -99,6 +99,14 @@ export class App {
             navigator.clipboard.writeText(url);
         });
 
+        const poePlannerButton = document.getElementById("poePlanner_Button") as HTMLAnchorElement;
+        poePlannerButton.addEventListener("click", () => {
+            const passiveCode = this.skillTreeUtilities.encodeURL(true)            
+            const url = 'https://poeplanner.com/atlas-tree/' + passiveCode;
+            window.open(url, '_blank')
+        });
+
+
         const showhide = document.getElementById("skillTreeStats_ShowHide") as HTMLButtonElement;
         showhide.addEventListener("click", () => {
             const content = document.getElementById("skillTreeStats_Content") as HTMLDivElement;
