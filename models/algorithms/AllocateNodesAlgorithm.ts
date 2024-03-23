@@ -84,11 +84,13 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
             const groupNodes = node.nodeGroup?.nodes
             if (groupNodes === undefined) continue;
             const nodes = [...groupNodes]
-            if (node.group === this.fixedGroups.exarchGroup) nodes.push('54499', '55003')
-            if (node.group === this.fixedGroups.abyssGroup) nodes.push('9338', '50203', '5515')
-            if (node.group === scarab60105) nodes.push('62161', '4703', '27878')
-            if (node.group === scarab26320) nodes.push('44872', '59578', '41869')
-            if (node.group === scarab1240) nodes.push('50610', '3198', '54101')
+            if(this.skillTreeData.tree.slice(0,5) === 'Atlas'){
+                if (node.group === this.fixedGroups.exarchGroup) nodes.push('54499', '55003')
+                if (node.group === this.fixedGroups.abyssGroup) nodes.push('9338', '50203', '5515')
+                if (node.group === scarab60105) nodes.push('62161', '4703', '27878')
+                if (node.group === scarab26320) nodes.push('44872', '59578', '41869')
+                if (node.group === scarab1240) nodes.push('50610', '3198', '54101')
+            }
 
             const potentialOutsideNodes: SkillNode[] = []
 
