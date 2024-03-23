@@ -106,6 +106,11 @@ export class App {
             window.open(url, '_blank')
         });
 
+        if(versionJson.versions[versionJson.versions.length - 1].slice(0, 4) !== version.slice(0, 4)) {
+            poePlannerButton.style.setProperty('display', 'none')
+        } else {
+            poePlannerButton.style.setProperty('display', 'inline')
+        }
 
         const showhide = document.getElementById("skillTreeStats_ShowHide") as HTMLButtonElement;
         showhide.addEventListener("click", () => {
