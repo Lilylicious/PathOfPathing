@@ -62,9 +62,9 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
             }
         }
 
-        let scarab60105 = 89;
-        let scarab26320 = 115;
-        let scarab1240 = 161;
+        let scarab60105 = -999;
+        let scarab26320 = -999;
+        let scarab1240 = -999;
 
         if (this.skillTreeData.patch.compare(versions.v3_24_0_atlas) == 0) {
             scarab60105 = 89;
