@@ -113,10 +113,10 @@ export class App {
             const stats = document.getElementById("skillTreeStats") as HTMLDivElement;
             if (content.toggleAttribute('hidden')) {
                 stats.style.setProperty('height', 'fit-content');
-                showhide.innerText = "Show";
+                showhide.innerText = "Show stats";
             } else {
                 stats.style.setProperty('height', `80%`);
-                showhide.innerText = "Hide";
+                showhide.innerText = "Hide stats";
             }
         });
 
