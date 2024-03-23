@@ -58,23 +58,8 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
             desiredGroupDistances[node.skill] = desiredGroupDistances[node.skill] ? desiredGroupDistances[node.skill] - 0.5 : 0.5;
 
             for (const stat of node.stats) {
-                if (stat.includes('maximum Life')) desiredGroupDistances[node.skill] = desiredGroupDistances[node.skill] ? desiredGroupDistances[node.skill] - desiredAdjustment : 1 - desiredAdjustment;
+                if (stat.includes('maximum Life')) desiredGroupDistances[node.skill] = desiredGroupDistances[node.skill] ? desiredGroupDistances[node.skill] - (2 * desiredAdjustment) : 1 - (2 * desiredAdjustment);
             }
-        }
-
-        let scarab60105 = -999;
-        let scarab26320 = -999;
-        let scarab1240 = -999;
-
-        if (this.skillTreeData.patch.compare(versions.v3_24_0_atlas) == 0) {
-            scarab60105 = 89;
-            scarab26320 = 111;
-            scarab1240 = 161;
-        }
-        else if (this.skillTreeData.patch.compare(versions.v3_24_0_standard) == 0) {
-            scarab60105 = 85;
-            scarab26320 = 111;
-            scarab1240 = 157;
         }
 
         const travelStats = ['1% increased quantity of items found in your maps', '3% increased scarabs found in your maps', '2% increased effect of modifiers on your maps', '2% chance for one monster in each of your maps to drop an additional connected map']
@@ -85,11 +70,11 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
             if (groupNodes === undefined) continue;
             const nodes = [...groupNodes]
             if(this.skillTreeData.tree.slice(0,5) === 'Atlas'){
-                if (node.group === this.fixedGroups.exarchGroup) nodes.push('54499', '55003')
-                if (node.group === this.fixedGroups.abyssGroup) nodes.push('9338', '50203', '5515')
-                if (node.group === scarab60105) nodes.push('62161', '4703', '27878')
-                if (node.group === scarab26320) nodes.push('44872', '59578', '41869')
-                if (node.group === scarab1240) nodes.push('50610', '3198', '54101')
+                if (nodes.includes('65499')) nodes.push('54499', '55003')
+                if (nodes.includes('19599')) nodes.push('9338', '50203', '5515')
+                if (nodes.includes('60105')) nodes.push('62161', '4703', '27878')
+                if (nodes.includes('26320')) nodes.push('44872', '59578', '41869')
+                if (nodes.includes('1240')) nodes.push('50610', '3198', '54101')
             }
 
             const potentialOutsideNodes: SkillNode[] = []
@@ -97,6 +82,7 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
             for (const id of nodes) {
                 if (debugSingleEntrance) console.log('Checking group node ' + id)
                 const searchNode = this.skillTreeData.nodes[id];
+                if(searchNode === undefined) continue;
                 const adjacent = [...searchNode.in, ...searchNode.out]
                 for (const adjacentId of adjacent) {
                     if (debugSingleEntrance) console.log('Checking adjacent node ' + adjacentId)
@@ -130,7 +116,7 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
 
 
 
-        const travelNodes = Object.values(this.skillTreeData.nodes).filter(node => node.isRegular2 && node.stats.some(stat => travelStats.includes(stat.toLowerCase())));
+        const travelNodes = Object.values(this.skillTreeData.nodes).filter(node => this.skillTreeData.tree === 'Default' ? node.isRegular1 : (node.isRegular2 && node.stats.some(stat => travelStats.includes(stat.toLowerCase()))));
 
         for (const travelNode of travelNodes) {
             desiredGroupDistances[travelNode.id] = desiredGroupDistances[travelNode.id] !== undefined ? desiredGroupDistances[travelNode.id] * desiredAdjustment : 1 - desiredAdjustment;
