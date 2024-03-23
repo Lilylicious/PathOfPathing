@@ -171,7 +171,7 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
                 }
                 //const skipped = []
                 // If we're too close to the root, do it second
-                while ((desiredNodes.filter(node => !node.isKeystone).length > 1 && shortestPath.path[0].isKeystone && !shortestPath.path[0].isWormhole) || desiredNodes.length > 2 && shortestPath.path[0].isNotable && (firstPath || desiredNodes.length > 3) && this.skillTreeData.tree.slice(0, 5) === 'Atlas' && Math.min(...Object.values(shortestPath.path[0].distance)) === 3) {
+                while (desiredNodes.length > 2 && shortestPath.path[0].isNotable && (firstPath || desiredNodes.length > 3) && this.skillTreeData.tree.slice(0, 5) === 'Atlas' && Math.min(...Object.values(shortestPath.path[0].distance)) === 3) {
                     if (debug) console.log('Skip performed on ' + shortestPath.id)
                     //const shortest = shortestPath;
                     shortestPath = paths.shift();
