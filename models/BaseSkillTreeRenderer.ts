@@ -570,7 +570,7 @@ export abstract class BaseSkillTreeRenderer implements ISkillTreeRenderer {
         const startNodes = this.skillTreeData.root.out
         const desiredNodes = this.skillTreeData.getNodes(SkillNodeStates.Desired);
         for (const id in desiredNodes) {
-            if(startNodes.indexOf(id) === -1)
+            if(startNodes.indexOf(id) === -1 && !desiredNodes[id].isAscendancyStart)
                 highlights.push({ node: desiredNodes[id], color: HighlightColor.Desired });
         }
 
