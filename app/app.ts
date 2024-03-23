@@ -111,6 +111,17 @@ export class App {
                 showhide.innerText = "Hide";
             }
         });
+
+        const showhideHelp = document.getElementById("help_ShowHide") as HTMLButtonElement;
+        showhideHelp.addEventListener("click", () => {
+            const content = document.getElementById("help_Content") as HTMLDivElement;
+            const helpBox = document.getElementById("help") as HTMLDivElement;
+            if (content.toggleAttribute('hidden')) {
+                showhideHelp.innerText = "Show help";
+            } else {
+                showhideHelp.innerText = "Hide help";
+            }
+        });
         
         const recalculate = document.getElementById('skillTreeControl_Recalculate') as HTMLInputElement;
         recalculate.addEventListener("click", () => {

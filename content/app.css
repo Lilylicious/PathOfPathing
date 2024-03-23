@@ -70,6 +70,47 @@ body {
     display: inline-block;
 }
 
+.help {
+    position: fixed;
+    right: 0;
+    bottom: 2em;
+    height: fit-content;
+    width: 22.4em;
+    background: #333;
+    border: 1px solid #999;
+    color: #FFF;
+    margin: 0.25em;
+    padding: 0.25em;
+    display: inline-block;
+    overflow: auto;
+}
+
+    .help .group {
+        padding-top: 0.5em;
+    }
+
+        .help .group .title {
+            font-size: x-large;
+            cursor: pointer;
+            display: inline-block;
+            width: 100%;
+        }
+
+#help_ShowHide {
+    background: #333;
+    border: 1px solid #999;
+    color: #FFF;
+    margin: 0 0 0 1em;
+    width: 6em;
+    display: inline-block;
+    position: relative;
+    right: -20.4em;
+}
+
+#help_Content {
+    margin: 1em;
+}
+
 #skillTreeContainer label {
     width: 4em;
     height: 1.5em;
