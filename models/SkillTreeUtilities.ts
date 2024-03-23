@@ -25,10 +25,6 @@ export class SkillTreeUtilities {
         this.skillTreeDataCompare = contextComapre;
         this.skillTreeCodec = new SkillTreeCodec();
 
-        this.shortestPath = new ShortestPathAlgorithm();
-        this.allocationAlgorithm = new AllocateNodesAlgorithm(this.skillTreeData);
-
-
         if (this.skillTreeData.patch.compare(versions.v3_24_0_atlas) == 0) {
             this.abyssGroup = 140;
             this.exarchGroup = 28;
@@ -45,6 +41,10 @@ export class SkillTreeUtilities {
             this.abyssGroup = 126;
             this.exarchGroup = 25;
         }
+        
+        this.shortestPath = new ShortestPathAlgorithm();
+        this.allocationAlgorithm = new AllocateNodesAlgorithm(this.skillTreeData, {abyssGroup: this.abyssGroup, exarchGroup: this.exarchGroup});
+
 
         this.notableException = ['3315', '1444', '44954', '49699', '23485']
 

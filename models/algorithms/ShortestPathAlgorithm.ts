@@ -6,7 +6,7 @@ import { FibonacciHeap } from 'mnemonist';
 
 export class ShortestPathAlgorithm implements IPathAlgorithm {
     Execute(treeData: SkillTreeData, target: SkillNode, nodeDistanceWeights: { [nodeId: string]: number }, wantDebug: boolean): SkillNode[] {
-        //wantDebug = true
+        wantDebug = false//target.skill === 17015
         if (target.is(SkillNodeStates.Active)) {
             if (wantDebug) console.log('Early return 1')
             return new Array<SkillNode>;
@@ -17,11 +17,8 @@ export class ShortestPathAlgorithm implements IPathAlgorithm {
         }
         let foundNode: SkillNode = target;
         const frontier: FibonacciHeap<SkillNode> = new FibonacciHeap((a, b) => {
-            const aPrev = prev[a.id]
-            const bPrev = prev[b.id]
-            if (aPrev === undefined || bPrev === undefined) return 0;
-            const aDist = distance[aPrev.id]
-            const bDist = distance[bPrev.id]
+            const aDist = distance[a.id]
+            const bDist = distance[b.id]
             if (aDist === undefined || bDist === undefined) return 0;
 
             if (aDist < bDist) return -1;
@@ -65,7 +62,7 @@ export class ShortestPathAlgorithm implements IPathAlgorithm {
                 //         continue;
                 //     }
 
-                let newDist = dist + (out.classStartIndex || out.is(SkillNodeStates.Desired) ? 0 : nodeDistanceWeights[id] ? nodeDistanceWeights[id] : 1);
+                let newDist = dist + (out.classStartIndex || out.is(SkillNodeStates.Desired) ? 0 : nodeDistanceWeights[id] !== undefined ? nodeDistanceWeights[id] : 1);
 
                 if (explored[id] || (distance[id] && distance[id] < newDist)) {
                     continue;

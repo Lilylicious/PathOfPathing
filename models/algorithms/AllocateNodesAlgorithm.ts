@@ -2,13 +2,17 @@ import { SkillTreeData } from "models/SkillTreeData";
 import { IAllocationAlgorithm } from "./IAllocationAlgorithm";
 import { SkillNode, SkillNodeStates } from "models/SkillNode";
 import { ShortestPathAlgorithm } from "./ShortestPathAlgorithm";
+import { versions } from "../versions/verions";
 
 
 export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
     skillTreeData: SkillTreeData;
+    fixedGroups: { abyssGroup: number; exarchGroup: number; }
 
-    constructor(treeData: SkillTreeData) {
+
+    constructor(treeData: SkillTreeData, fixedGroups: { abyssGroup: number; exarchGroup: number; }) {
         this.skillTreeData = treeData;
+        this.fixedGroups = fixedGroups;
     }
 
     Execute(shortestPathAlgorithm: ShortestPathAlgorithm): void {
@@ -47,18 +51,113 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
         });
 
 
-        const desiredGroupDistances = this.adjustDesiredGroupDistances(desiredNodes.filter(node => node.isNotable), 0.01)
+        const desiredAdjustment = 0.01;
+        const desiredGroupDistances = this.adjustDesiredGroupDistances(desiredNodes.filter(node => node.isNotable), desiredAdjustment)
 
         for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isNotable)) {
             desiredGroupDistances[node.skill] = desiredGroupDistances[node.skill] ? desiredGroupDistances[node.skill] - 0.5 : 0.5;
 
             for (const stat of node.stats) {
-                if (stat.includes('maximum Life')) desiredGroupDistances[node.skill] = desiredGroupDistances[node.skill] ? desiredGroupDistances[node.skill] - 0.01 : 0.99;
+                if (stat.includes('maximum Life')) desiredGroupDistances[node.skill] = desiredGroupDistances[node.skill] ? desiredGroupDistances[node.skill] - desiredAdjustment : 1 - desiredAdjustment;
             }
+        }
+
+        let scarab60105 = 89;
+        let scarab26320 = 115;
+        let scarab1240 = 161;
+
+        if (this.skillTreeData.patch.compare(versions.v3_24_0_atlas) == 0) {
+            scarab60105 = 89;
+            scarab26320 = 111;
+            scarab1240 = 161;
+        }
+        else if (this.skillTreeData.patch.compare(versions.v3_24_0_standard) == 0) {
+            scarab60105 = 85;
+            scarab26320 = 111;
+            scarab1240 = 157;
+        }
+
+        const travelStats = ['1% increased quantity of items found in your maps', '3% increased scarabs found in your maps', '2% increased effect of modifiers on your maps', '2% chance for one monster in each of your maps to drop an additional connected map']
+        const singleEntranceNodes: { [node: string]: number } = {}
+        for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isMastery)) {
+            const debugSingleEntrance = false//node.skill === 1240
+            const groupNodes = node.nodeGroup?.nodes
+            if (groupNodes === undefined) continue;
+            const nodes = [...groupNodes]
+            if (node.group === this.fixedGroups.exarchGroup) nodes.push('54499', '55003')
+            if (node.group === this.fixedGroups.abyssGroup) nodes.push('9338', '50203', '5515')
+            if (node.group === scarab60105) nodes.push('62161', '4703', '27878')
+            if (node.group === scarab26320) nodes.push('44872', '59578', '41869')
+            if (node.group === scarab1240) nodes.push('50610', '3198', '54101')
+
+            const potentialOutsideNodes: SkillNode[] = []
+
+            for (const id of nodes) {
+                if (debugSingleEntrance) console.log('Checking group node ' + id)
+                const searchNode = this.skillTreeData.nodes[id];
+                const adjacent = [...searchNode.in, ...searchNode.out]
+                for (const adjacentId of adjacent) {
+                    if (debugSingleEntrance) console.log('Checking adjacent node ' + adjacentId)
+                    const adjacentNode = this.skillTreeData.nodes[adjacentId];
+                    //if(!nodes.includes(adjacentId) || adjacentNode.stats.map(stat => stat.toLocaleLowerCase()).some(stat => travelStats.includes(stat))){
+                    for (const stat of adjacentNode.stats) {
+                        if (debugSingleEntrance) console.log('Checking stat ' + stat.toLocaleLowerCase())
+                        if (travelStats.includes(stat.toLowerCase()) && !potentialOutsideNodes.includes(adjacentNode)) {
+                            if (debugSingleEntrance) console.log('Adding outside node ' + adjacentId)
+                            potentialOutsideNodes.push(adjacentNode);
+                        }
+                    }
+                    //}
+                }
+
+            }
+
+            if (debugSingleEntrance) console.log('potential outside nodes length' + potentialOutsideNodes.length)
+            if (potentialOutsideNodes.length === 1) {
+                for (const id of nodes) {
+                    singleEntranceNodes[id] = potentialOutsideNodes[0].skill;
+                }
+            }
+        }
+
+        for (const desiredNode of desiredNodes) {
+            if (singleEntranceNodes[desiredNode.id]) {
+                desiredGroupDistances[singleEntranceNodes[desiredNode.id]] = 0;
+            }
+        }
+
+
+
+        const travelNodes = Object.values(this.skillTreeData.nodes).filter(node => node.isRegular2 && node.stats.some(stat => travelStats.includes(stat.toLowerCase())));
+
+        for (const travelNode of travelNodes) {
+            desiredGroupDistances[travelNode.id] = desiredGroupDistances[travelNode.id] !== undefined ? desiredGroupDistances[travelNode.id] * desiredAdjustment : 1 - desiredAdjustment;
+        }
+
+
+
+        const contentTypes = ['Alva', 'Anarchy', 'Bestiary', 'Beyond', 'Blight', 'Breach', 'CleansingFire', 'Conqueror',
+            'Delirium', 'Delve', 'Domination', 'ElderShaper', 'Essence', 'Expedition', 'Harbinger', 'Harvest', 'Heist',
+            'Jun', 'Kirac', 'Labyrinth', 'Legion', 'Map', 'Metamorph', 'Necropolis', 'Ritual', 'Scarab', 'Sextant', 'Strongbox', 'Synthesis',
+            'Tangle', 'Torment', 'Vaal']
+
+        for (const contentType of contentTypes) {
+            if (desiredNodes.filter(node => node.GetIcon().toLowerCase().indexOf(contentType.toLowerCase()) > -1 && node.GetIcon().toLowerCase().indexOf('wheelofdisabling') === -1).filter(node => !travelNodes.includes(node)).length > 0) {
+                const desiredInContent = Object.values(this.skillTreeData.nodes).filter(node => node.GetIcon().toLowerCase().indexOf(contentType.toLowerCase()) > -1 && node.GetIcon().toLowerCase().indexOf('wheelofdisabling') === -1).filter(node => !travelNodes.includes(node))
+
+                for (const contentNode of desiredInContent) {
+                    desiredGroupDistances[contentNode.id] = desiredGroupDistances[contentNode.id] !== undefined ? desiredGroupDistances[contentNode.id] - (2 * desiredAdjustment) : 1 - (2 * desiredAdjustment);
+                }
+            }
+        }
+
+        for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isWormhole)) {
+            desiredGroupDistances[node.id] = 1.5;
         }
 
         if (desiredNodes.length > 0) {
             let count = 0
+            let firstPath = true;
             while (desiredNodes.length > 0) {
                 if (++count > 100) {
                     console.log('Infinite loop detection triggered. Please report this as a bug.')
@@ -77,10 +176,23 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
                     break;
                 }
                 paths.sort((a, b) => a.path.length - b.path.length)
-                const shortestPath = paths.shift()
+                let shortestPath = paths.shift()
                 if (shortestPath === undefined) {
                     if (debug) console.log('Shortest path undefined')
                     return;
+                }
+                //const skipped = []
+                // If we're too close to the root, do it second
+                while (desiredNodes.length > 2 && shortestPath.path[0].isNotable && (firstPath || desiredNodes.length > 3) && this.skillTreeData.tree.slice(0, 5) === 'Atlas' && Math.min(...Object.values(shortestPath.path[0].distance)) === 3) {
+                    if (debug) console.log('Skip performed on ' + shortestPath.id)
+                    //const shortest = shortestPath;
+                    shortestPath = paths.shift();
+                    //skipped.push(shortest);
+                    firstPath = false;
+                    if (shortestPath === undefined) {
+                        if (debug) console.log('Shortest path undefined after skip')
+                        return;
+                    }
                 }
 
                 const shortestPathNode = this.skillTreeData.nodes[shortestPath.id]
@@ -183,9 +295,11 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
                 const yeeted = node;
                 if (yeeted === undefined) break;
                 this.skillTreeData.removeState(yeeted, SkillNodeStates.Active)
-                //console.log('Yeeted ' + yeeted?.GetId())
+                if (debug) console.log('Yeeted ' + yeeted?.GetId())
             }
         }
+
+
     }
 
     private adjustDesiredGroupDistances = (desiredNodes: Array<SkillNode>, adjustment: number): { [nodeId: string]: number } => {
@@ -215,11 +329,11 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
 
             const centerX = totalX / nodeIds.length;
             const centerY = totalY / nodeIds.length;
-
+            const debug = false//node.skill === 17015
             for (const nodeId of nodeIds) {
                 const node = this.skillTreeData.nodes[nodeId]
                 if (node.name === 'Map Drop Duplication' || node.name === 'Adjacent Map Drop Chance') continue
-
+                if (debug) console.log(node.name)
                 const distance = getDistance(centerX, centerY, node.x, node.y)
                 furthestDistance = distance > furthestDistance ? distance : furthestDistance;
             }
@@ -236,6 +350,7 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
                 nodeDistanceWeights[node.id] = 1 - adjustment
             }
         }
+
         return nodeDistanceWeights
     }
 }
