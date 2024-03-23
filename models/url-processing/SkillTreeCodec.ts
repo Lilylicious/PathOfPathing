@@ -50,7 +50,7 @@ export class SkillTreeCodec implements ISkillTreeCodec {
                 }
                 if (node.expansionJewel !== undefined) {
                     extendedNodes.push(node);
-                } else {
+                } else if (!node.isMastery) {
                     nodes.push(node);
                 }
             }
