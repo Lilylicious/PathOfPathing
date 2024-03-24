@@ -2,8 +2,8 @@ import { SkillTreeData } from "./SkillTreeData";
 import { SkillNode, SkillNodeStates } from "./SkillNode";
 import { SkillTreeEvents } from "./SkillTreeEvents";
 import { SkillTreeCodec } from "./url-processing/SkillTreeCodec";
-import { ShortestPathAlgorithm } from "./algorithms/ShortestPathAlgorithm"
-import { AllocateNodesAlgorithm } from "./algorithms/AllocateNodesAlgorithm"
+import { ShortestPathToDesiredAlgorithm } from "./algorithms/ShortestPathToDesiredAlgorithm"
+import { AllocateNodeGroupsAlgorithm } from "./algorithms/AllocateNodeGroupsAlgorithm"
 import { versions } from "./versions/verions";
 
 export class SkillTreeUtilities {
@@ -11,8 +11,8 @@ export class SkillTreeUtilities {
     skillTreeDataCompare: SkillTreeData | undefined;
     skillTreeCodec: SkillTreeCodec;
 
-    shortestPath: ShortestPathAlgorithm;
-    allocationAlgorithm: AllocateNodesAlgorithm;
+    shortestPath: ShortestPathToDesiredAlgorithm;
+    allocationAlgorithm: AllocateNodeGroupsAlgorithm;
 
     abyssGroup = 0;
     exarchGroup = 0;
@@ -42,8 +42,8 @@ export class SkillTreeUtilities {
             this.exarchGroup = 25;
         }
         
-        this.shortestPath = new ShortestPathAlgorithm();
-        this.allocationAlgorithm = new AllocateNodesAlgorithm(this.skillTreeData, {abyssGroup: this.abyssGroup, exarchGroup: this.exarchGroup});
+        this.shortestPath = new ShortestPathToDesiredAlgorithm();
+        this.allocationAlgorithm = new AllocateNodeGroupsAlgorithm(this.skillTreeData, {abyssGroup: this.abyssGroup, exarchGroup: this.exarchGroup});
 
 
         this.notableException = ['3315', '1444', '44954', '49699', '23485']

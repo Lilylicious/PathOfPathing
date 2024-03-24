@@ -155,7 +155,7 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
                 const paths: Array<{ id: string, path: Array<SkillNode> }> = [];
                 for (const node of desiredNodes) {
                     const id = node.GetId();
-                    const path = shortestPathAlgorithm.Execute(this.skillTreeData, node, desiredGroupDistances, false);
+                    const path = shortestPathAlgorithm.Execute(this.skillTreeData, [node], desiredGroupDistances, false);
                     if (path.length > 0)
                         paths.push({ id, path })
                 }

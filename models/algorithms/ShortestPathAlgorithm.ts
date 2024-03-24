@@ -5,8 +5,10 @@ import { IPathAlgorithm } from "./IPathAlgorithm";
 import { FibonacciHeap } from 'mnemonist';
 
 export class ShortestPathAlgorithm implements IPathAlgorithm {
-    Execute(treeData: SkillTreeData, target: SkillNode, nodeDistanceWeights: { [nodeId: string]: number }, wantDebug: boolean): SkillNode[] {
+    Execute(treeData: SkillTreeData, nodeGroup: SkillNode[], nodeDistanceWeights: { [nodeId: string]: number }, wantDebug: boolean): SkillNode[] {
         wantDebug = false//target.skill === 17015
+        if(nodeGroup.length === 0) return new Array<SkillNode>();
+        const target = nodeGroup[0];
         if (target.is(SkillNodeStates.Active)) {
             if (wantDebug) console.log('Early return 1')
             return new Array<SkillNode>;
