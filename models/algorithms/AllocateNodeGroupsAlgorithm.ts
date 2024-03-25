@@ -223,7 +223,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
             if(this.skillTreeData.nodes['65225'].is(SkillNodeStates.Desired)){
                 for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isRegular2 && node.stats.some(stat => stat.toLowerCase() === '3% increased scarabs found in your maps'))) {
-                    desiredGroupDistances[node.id] = 2;
+                    desiredGroupDistances[node.id] = 1.1;
                 }
             }
             
