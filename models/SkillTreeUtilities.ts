@@ -545,9 +545,11 @@ export class SkillTreeUtilities {
     public allocateNodes = (recalculated: boolean) => {
         if (!recalculated && this.pause) return;
 
-        //console.time('Execution time')
+        const preExecute = performance.now();
         this.allocationAlgorithm.Execute(this.shortestPath);
-        //console.timeEnd('Execution time')
+        const timeToExecute = performance.now() - preExecute;
+        if(timeToExecute > 5) console.log('Execution time: ' + timeToExecute + ' ms')
+        
 
         this.skillTreeData.clearState(SkillNodeStates.Hovered);
         this.skillTreeData.clearState(SkillNodeStates.Pathing);

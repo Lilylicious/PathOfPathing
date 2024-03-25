@@ -4,6 +4,7 @@ import { SkillNode, SkillNodeStates } from "../SkillNode";
 import { ShortestPathToDesiredAlgorithm } from "./ShortestPathToDesiredAlgorithm";
 import { versions } from "../versions/verions";
 import FibonacciHeap from "mnemonist/fibonacci-heap";
+import { beforeAll } from "bun:test";
 
 
 export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
@@ -37,6 +38,41 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             nodeGroups.push([node])
         }
 
+
+
+        let allAdjacentsMerged = false;
+        while (!allAdjacentsMerged) {
+            let node1: SkillNode | undefined = undefined;
+            let node2: SkillNode | undefined = undefined;
+            for (const group of nodeGroups) {
+                for (const node of group) {
+                    const adjacents = [...node.in, ...node.out];
+                    for (const adjacent of adjacents) {
+                        const adjacentNode = this.skillTreeData.nodes[adjacent];
+                        if (adjacentNode.is(SkillNodeStates.Active) && !group.includes(adjacentNode)) {
+                            node1 = node;
+                            node2 = adjacentNode;
+                            break;
+                        }
+                    }
+
+                    if (node1 && node2) break;
+                }
+                if (node1 && node2) break;
+            }
+
+            if (node1 && node2) {
+                const originGroup = nodeGroups.find(group => group.includes(node1!))
+                const targetGroup = nodeGroups.find(group => group.includes(node2!))
+                const mergedGroup = this.mergeGroups(originGroup!, targetGroup!);
+                nodeGroups = nodeGroups.filter(group => group.map(node => node.skill).sort().join(',') !== originGroup!.map(node => node.skill).sort().join(',') && group.map(node => node.skill).sort().join(',') != targetGroup!.map(node => node.skill).sort().join(','));
+                nodeGroups.push(mergedGroup);
+            } else {
+                allAdjacentsMerged = true;
+            }
+        }
+
+
         const desiredAdjustment = 0.01;
         const desiredGroupDistances = this.adjustDesiredGroupDistances(desiredNodesUnsorted.filter(node => node.isNotable), desiredAdjustment)
 
@@ -49,6 +85,59 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
         }
 
         const travelStats = ['1% increased quantity of items found in your maps', '3% increased scarabs found in your maps', '2% increased effect of modifiers on your maps', '2% chance for one monster in each of your maps to drop an additional connected map']
+        for (const index in nodeGroups) {
+            if (nodeGroups[index].some(node => node.classStartIndex !== undefined)) continue;
+
+            const frontier = [...nodeGroups[index]];
+            const exitNodes: SkillNode[] = [];
+            const visited: SkillNode[] = [];
+
+            while (frontier.length > 0) {
+                const frontierNode = frontier.shift();
+                if (frontierNode === undefined) break;
+                const adjacent = [...new Set([...frontierNode.in, ...frontierNode.out])].filter(id =>
+                    !([...exitNodes, ...visited].map(node => node.GetId())).includes(id)
+                );
+
+                for (const adjacentId of adjacent) {
+                    const adjacentNode = this.skillTreeData.nodes[adjacentId];
+                    if (adjacentNode.stats.some(stat => travelStats.includes(stat.toLowerCase()))) {
+                        exitNodes.push(adjacentNode);
+                    } else {
+                        frontier.push(adjacentNode);
+                        visited.push(adjacentNode);
+                    }
+                }
+            }
+
+            if (exitNodes.length === 1) {
+                const node = exitNodes[0];
+
+                this.skillTreeData.addState(node, SkillNodeStates.Active);
+
+                const adjacents = [...new Set([...node.in, ...node.out])]
+                let groupFound = false;
+                for (const index in nodeGroups) {
+                    if (nodeGroups[index].map(groupNode => groupNode.GetId()).includes(node.GetId()))
+                        continue;
+
+                    if (nodeGroups[index].some(groupNode => adjacents.includes(groupNode.GetId()))) {
+                        nodeGroups[index].push(node);
+                        groupFound = true;
+                        break;
+                    }
+                }
+
+                if (!groupFound) {
+                    nodeGroups.push([node]);
+                }
+            }
+
+        }
+        //console.log(nodeGroups)
+        //return;
+
+
         // const singleEntranceNodes: { [node: string]: number } = {}
         // for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isMastery)) {
         //     const debugSingleEntrance = false//node.skill === 1240
@@ -131,7 +220,6 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             }
         }
 
-
         if (nodeGroups.length > 1) {
             let count = 0
             while (nodeGroups.length > 1) {
@@ -143,33 +231,54 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
                 const paths: SkillNode[][] = [];
 
-                for (const group of nodeGroups) {
+                const groupsToCheck = nodeGroups.length > 2 ? nodeGroups.filter(group => !group.some(node => node.classStartIndex !== undefined)) : nodeGroups;
+
+                for (const group of groupsToCheck) {
                     const newPaths = shortestPathAlgorithm.Execute(this.skillTreeData, group, desiredGroupDistances, false);
                     for (const path of newPaths) {
                         if (path.length > 0)
                             paths.push(path);
-                            if (debug) console.log(path.map(node => node.GetId()).join(', '))
+                        if (debug) console.log(path.map(node => node.GetId()).join(', '))
                     }
 
                 }
 
                 const occurences: { [id: number]: number } = {};
 
-                for(const path of paths){
-                    for(const node of path){
-                        occurences[node.skill] = occurences[node.skill] ? occurences[node.skill] + 1 : 1
+                for (const path of paths) {
+                    for (const node of path) {
+                        if (path.indexOf(node) !== 0 && path.indexOf(node) !== path.length - 1) {
+                            occurences[node.skill] = occurences[node.skill] ? occurences[node.skill] + 1 : 1
+                        } else {
+                            {
+                                occurences[node.skill] = occurences[node.skill] ? occurences[node.skill] : 0;
+                            }
+                        }
                     }
                 }
 
-                paths.sort((a, b) => {
-                    let sumA = a.reduce((previousSum, currentNode) => previousSum + occurences[currentNode.skill], 0);
-                    let sumB = b.reduce((previousSum, currentNode) => previousSum + occurences[currentNode.skill], 0);
+                function compareOccurences(a: SkillNode[], b: SkillNode[]) {
+                    let sumA = a.reduce((previousSum, currentNode) => previousSum + occurences[currentNode.skill], 0) / (a.length - 2);
+                    let sumB = b.reduce((previousSum, currentNode) => previousSum + occurences[currentNode.skill], 0) / (b.length - 2);
 
                     if (sumA === undefined || sumB === undefined) return 0;
                     if (sumA < sumB) return 1;
                     if (sumA > sumB) return -1;
                     return 0;
-                })
+                }
+
+
+                function compareLengths(a: SkillNode[], b: SkillNode[]) {
+                    let sumA = a.length;
+                    let sumB = b.length;
+
+                    if (sumA === undefined || sumB === undefined) return 0;
+                    if (sumA < sumB) return -1;
+                    if (sumA > sumB) return 1;
+                    return 0;
+                }
+                paths.sort(compareOccurences)
+                paths.sort(compareLengths)
 
                 if (paths.length == 0) {
                     if (debug) console.log('No paths found')
@@ -204,25 +313,27 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
                 const lastNode = shortestPath![shortestPath!.length - 1];
                 if (debug) console.log('lastNode ' + lastNode.GetId())
-                
+
                 if (debug) console.log('Groups before merge ' + nodeGroups.length)
-                
+
                 // const originGroup = nodeGroups.splice(nodeGroups.findIndex(group => group.includes(groupNode)))[0];
                 // const targetGroup = nodeGroups.splice(nodeGroups.findIndex(group => group.includes(lastNode)))[0];
 
                 const originGroup = nodeGroups.find((group => group.includes(groupNode)))
                 const targetGroup = nodeGroups.find((group => group.includes(lastNode)))
-                if(originGroup === undefined || targetGroup === undefined){
+                if (originGroup === undefined || targetGroup === undefined) {
+                    console.log(nodeGroups)
                     console.log(originGroup, groupNode)
                     console.log(targetGroup, lastNode)
                     return;
-                } 
+                }
+                const mergedGroup = this.mergeGroups(originGroup, targetGroup);
                 nodeGroups = nodeGroups.filter(group => group.map(node => node.skill).sort().join(',') !== originGroup.map(node => node.skill).sort().join(',') && group.map(node => node.skill).sort().join(',') != targetGroup.map(node => node.skill).sort().join(','));
                 if (debug) console.log(nodeGroups, originGroup, targetGroup)
 
-                const pathNodes = shortestPath.filter(node => ![...originGroup, ...targetGroup].includes(node))
+                const pathNodes = shortestPath.filter(node => ![...mergedGroup].includes(node))
 
-                const newGroup = [...originGroup, ...targetGroup, ...pathNodes];
+                const newGroup = [...mergedGroup, ...pathNodes];
                 nodeGroups.push(newGroup);
             }
         }
@@ -309,6 +420,19 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
         //         if (debug) console.log('Yeeted ' + yeeted?.GetId())
         //     }
         // }
+
+    }
+
+    private mergeGroups = (originGroup: SkillNode[], targetGroup: SkillNode[]): SkillNode[] => {
+        if (originGroup === undefined || targetGroup === undefined) {
+            console.log('Group undefined')
+            console.log(originGroup)
+            console.log(targetGroup)
+            return new Array<SkillNode>();
+        }
+
+        return [...originGroup, ...targetGroup];
+
     }
 
     private adjustDesiredGroupDistances = (desiredNodes: Array<SkillNode>, adjustment: number): { [nodeId: string]: number } => {
