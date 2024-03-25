@@ -454,6 +454,26 @@ export class SkillTreeUtilities {
                     groups.push(other.group)
                 }
             }
+            let addState: SkillNodeStates | undefined;                
+            let removeState: SkillNodeStates | undefined;
+
+            const nodeGroups = groups.map(groupId => this.skillTreeData.groups[groupId].nodes).map(nodeIds => nodeIds.map(nodeId => this.skillTreeData.nodes[nodeId]))
+            const clear = nodeGroups.map(group => group.filter(node => node.isNotable && !node.is(SkillNodeStates.Desired) && !node.is(SkillNodeStates.UnDesired))).flat().length
+            const desired = nodeGroups.map(group => group.filter(node => node.isNotable && node.is(SkillNodeStates.Desired))).flat().length
+            const undesired = nodeGroups.map(group => group.filter(node => node.isNotable && node.is(SkillNodeStates.UnDesired))).flat().length
+            const max = Math.max(clear, desired, undesired);
+
+            if(clear == max){
+                addState = SkillNodeStates.Desired;
+                removeState = undefined;
+
+            } else if (desired == max){
+                addState = SkillNodeStates.UnDesired;
+                removeState = SkillNodeStates.Desired;
+            } else {
+                addState = undefined;
+                removeState = SkillNodeStates.UnDesired;
+            }
 
             for (const groupId of groups) {
                 let nodes = [...this.skillTreeData.groups[groupId].nodes]
@@ -462,21 +482,15 @@ export class SkillTreeUtilities {
 
                 for (const nodeId of nodes) {
                     const node = this.skillTreeData.nodes[nodeId]
-                    if (node.isNotable || this.notableException.includes(nodeId)) {
-                        if (node.is(SkillNodeStates.Desired)) {
-                            this.skillTreeData.removeState(node, SkillNodeStates.Desired);
-                            this.skillTreeData.addState(node, SkillNodeStates.UnDesired);
-                        }
-                        else if (node.is(SkillNodeStates.UnDesired)) {
-                            this.skillTreeData.removeState(node, SkillNodeStates.UnDesired);
-                        }
-                        else if (!node.isMastery) {
-                            this.skillTreeData.addState(node, SkillNodeStates.Desired);
-                        }
-                        SkillTreeEvents.skill_tree.fire("highlighted-nodes-update");
+                    if (!node.isMastery && (node.isNotable || this.notableException.includes(nodeId))) {
+                        if(addState !== undefined)
+                            this.skillTreeData.addState(node, addState);
+                        if(removeState !== undefined)
+                            this.skillTreeData.removeState(node, removeState);
                     }
                 }
             }
+            SkillTreeEvents.skill_tree.fire("highlighted-nodes-update");
         }
         else {
             if (node.is(SkillNodeStates.Desired)) {
