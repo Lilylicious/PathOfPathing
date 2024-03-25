@@ -64,9 +64,46 @@ export class SkillTreeUtilities {
             this.allocateNodes(false);
         });
         SkillTreeEvents.skill_tree.on("recalculate", this.allocateNodes);
+        SkillTreeEvents.skill_tree.on("allocate", this.specialAllocate);
+        SkillTreeEvents.skill_tree.on("deallocate", this.specialDeallocate);
         SkillTreeEvents.skill_tree.on("encode-url", this.encodeURL);
 
     }
+
+    private specialAllocate = (statString: string) => {
+        const nodes = Object.values(this.skillTreeData.nodes).filter(node => node.ascendancyName === '' && !node.isBlighted && node.stats.some(stat => stat.toLowerCase().includes(statString)));
+        // const regexResult = Object.values(this.skillTreeData.nodes).filter(node => node.ascendancyName === '' && !node.isBlighted && 
+        // node.stats.some(stat => stat.toLowerCase().match(statString))
+        // )
+
+        // if(regexResult.length > 0 && regexResult.length < 300){
+        //     for(const node of regexResult){
+        //         this.skillTreeData.addState(node, SkillNodeStates.Desired)
+        //         this.skillTreeData.removeState(node, SkillNodeStates.UnDesired)
+        //     }
+        // } else {
+        for(const node of nodes){
+            this.skillTreeData.addState(node, SkillNodeStates.Desired)
+            this.skillTreeData.removeState(node, SkillNodeStates.UnDesired)
+        }
+        //}
+        
+
+        this.allocateNodes(false);
+        SkillTreeEvents.skill_tree.fire("highlighted-nodes-update");
+    }
+
+    private specialDeallocate = (statString: string) => {
+        const nodes = Object.values(this.skillTreeData.nodes).filter(node => node.ascendancyName === '' && node.stats.some(stat => stat.toLowerCase().includes(statString)))
+        
+        for(const node of nodes){
+            this.skillTreeData.removeState(node, SkillNodeStates.Desired)
+        }
+
+        this.allocateNodes(false);
+        SkillTreeEvents.skill_tree.fire("highlighted-nodes-update");
+    }
+
 
     private decodeImport = (str: string | undefined = undefined) => {
         if (str === undefined) return;

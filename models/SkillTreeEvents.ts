@@ -53,6 +53,8 @@ export class SkillTreeEvents {
         | "normal-node-count-maximum"
         | "normal-node-count"
         | "recalculate"
+        | "allocate"
+        | "deallocate"
     >();
 
     public static node = new SkillTreeEventContainer<

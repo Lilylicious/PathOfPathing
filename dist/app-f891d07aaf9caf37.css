@@ -30,9 +30,21 @@ body {
     align-items: center;
 }
 
+.specialAllocateButtons {
+    position: fixed;
+    bottom: 1.5em;
+    left: 0;
+    height: 1.5em;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: center;
+    align-items: center;
+}
+
+
 .skillTreeStats {
     position: fixed;
-    bottom: 2em;
+    bottom: 3em;
     left: 0;
     height: fit-content;
     width: 22.4em;

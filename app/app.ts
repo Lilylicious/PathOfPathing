@@ -79,7 +79,8 @@ export class App {
 
             const importControl = document.getElementById("skillTreeControl_Import") as HTMLInputElement
 
-            importControl.value = ''
+            importControl.value = '';
+            statString.value = '';
 
             this.skillTreeData.clearState(SkillNodeStates.Active);
             this.skillTreeData.clearState(SkillNodeStates.Desired);
@@ -140,6 +141,19 @@ export class App {
         recalculate.addEventListener("click", () => {
             SkillTreeEvents.skill_tree.fire("recalculate", true);
         });
+
+        const allocateSpecial = document.getElementById('skillTreeControl_allocateSpecial') as HTMLInputElement;
+        const deallocateSpecial = document.getElementById('skillTreeControl_deallocateSpecial') as HTMLInputElement;
+        const statString = document.getElementById("skillTreeControl_StatString") as HTMLInputElement;
+        allocateSpecial.addEventListener("click", () => {
+            SkillTreeEvents.skill_tree.fire("allocate", statString.value.toLowerCase());
+        });
+        deallocateSpecial.addEventListener("click", () => {
+            SkillTreeEvents.skill_tree.fire("deallocate", statString.value.toLowerCase());
+        });
+
+
+        
 
         const pause = document.getElementById('skillTreeControl_Pause') as HTMLInputElement;
         pause.addEventListener("click", () => {
