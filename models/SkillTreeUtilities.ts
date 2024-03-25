@@ -2,8 +2,8 @@ import { SkillTreeData } from "./SkillTreeData";
 import { SkillNode, SkillNodeStates } from "./SkillNode";
 import { SkillTreeEvents } from "./SkillTreeEvents";
 import { SkillTreeCodec } from "./url-processing/SkillTreeCodec";
-import { ShortestPathAlgorithm } from "./algorithms/ShortestPathAlgorithm"
-import { AllocateNodesAlgorithm } from "./algorithms/AllocateNodesAlgorithm"
+import { ShortestPathToDesiredAlgorithm } from "./algorithms/ShortestPathToDesiredAlgorithm"
+import { AllocateNodeGroupsAlgorithm } from "./algorithms/AllocateNodeGroupsAlgorithm"
 import { versions } from "./versions/verions";
 
 export class SkillTreeUtilities {
@@ -11,8 +11,8 @@ export class SkillTreeUtilities {
     skillTreeDataCompare: SkillTreeData | undefined;
     skillTreeCodec: SkillTreeCodec;
 
-    shortestPath: ShortestPathAlgorithm;
-    allocationAlgorithm: AllocateNodesAlgorithm;
+    shortestPath: ShortestPathToDesiredAlgorithm;
+    allocationAlgorithm: AllocateNodeGroupsAlgorithm;
 
     abyssGroup = 0;
     exarchGroup = 0;
@@ -42,8 +42,8 @@ export class SkillTreeUtilities {
             this.exarchGroup = 25;
         }
         
-        this.shortestPath = new ShortestPathAlgorithm();
-        this.allocationAlgorithm = new AllocateNodesAlgorithm(this.skillTreeData, {abyssGroup: this.abyssGroup, exarchGroup: this.exarchGroup});
+        this.shortestPath = new ShortestPathToDesiredAlgorithm();
+        this.allocationAlgorithm = new AllocateNodeGroupsAlgorithm(this.skillTreeData, {abyssGroup: this.abyssGroup, exarchGroup: this.exarchGroup});
 
 
         this.notableException = ['3315', '1444', '44954', '49699', '23485']
@@ -111,6 +111,7 @@ export class SkillTreeUtilities {
             if (rootNode === undefined) {
                 return
             }
+            this.skillTreeData.addState(rootNode, SkillNodeStates.Desired)
             const nodesToFind = def.Nodes.map(node => node.skill);
             const nodesFound: Number[] = []
 
@@ -141,7 +142,7 @@ export class SkillTreeUtilities {
             for (const [node, effect] of def.MasteryEffects) {
                 if (!nodesFound.includes(node.skill)) continue;
                 this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
-                this.skillTreeData.masteryEffects[node.skill] = effect;
+                //this.skillTreeData.masteryEffects[node.skill] = effect;
             }
 
             for (const node of def.Desired) {
@@ -545,9 +546,11 @@ export class SkillTreeUtilities {
     public allocateNodes = (recalculated: boolean) => {
         if (!recalculated && this.pause) return;
 
-        //console.time('Execution time')
+        const preExecute = performance.now();
         this.allocationAlgorithm.Execute(this.shortestPath);
-        //console.timeEnd('Execution time')
+        const timeToExecute = performance.now() - preExecute;
+        if(timeToExecute > 5) console.log('Execution time: ' + timeToExecute + ' ms')
+        
 
         this.skillTreeData.clearState(SkillNodeStates.Hovered);
         this.skillTreeData.clearState(SkillNodeStates.Pathing);

@@ -5,15 +5,13 @@ import { IPathAlgorithm } from "./IPathAlgorithm";
 import { FibonacciHeap } from 'mnemonist';
 
 export class ShortestPathAlgorithm implements IPathAlgorithm {
-    Execute(treeData: SkillTreeData, target: SkillNode, nodeDistanceWeights: { [nodeId: string]: number }, wantDebug: boolean): SkillNode[] {
+    Execute(treeData: SkillTreeData, nodeGroup: SkillNode[], nodeDistanceWeights: { [nodeId: string]: number }, wantDebug: boolean): SkillNode[][] {
         wantDebug = false//target.skill === 17015
-        if (target.is(SkillNodeStates.Active)) {
-            if (wantDebug) console.log('Early return 1')
-            return new Array<SkillNode>;
-        }
+        if(nodeGroup.length === 0) return new Array<Array<SkillNode>>();
+        const target = nodeGroup[0];
         if (target.isBlighted) {
             if (wantDebug) console.log('Early return 2')
-            return new Array<SkillNode>(target);
+            return new Array<Array<SkillNode>>([target]);
         }
         let foundNode: SkillNode = target;
         const frontier: FibonacciHeap<SkillNode> = new FibonacciHeap((a, b) => {
@@ -95,7 +93,7 @@ export class ShortestPathAlgorithm implements IPathAlgorithm {
 
         if (wantDebug) console.log('Found node', foundNode, foundNode === target, distance[foundNode.GetId()])
         if (foundNode === target || distance[foundNode.GetId()] === undefined) {
-            return new Array<SkillNode>();
+            return new Array<Array<SkillNode>>();
         }
         let current: SkillNode | undefined = foundNode;
         const path = new Array<SkillNode>();
@@ -103,7 +101,7 @@ export class ShortestPathAlgorithm implements IPathAlgorithm {
             path.push(current);
             current = prev[current.GetId()];
         }
-        return path.reverse();
+        return [path.reverse()];
     }
 
     private getDistance(x1: number, y1: number, x2: number, y2: number) {
