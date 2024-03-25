@@ -111,6 +111,7 @@ export class SkillTreeUtilities {
             if (rootNode === undefined) {
                 return
             }
+            this.skillTreeData.addState(rootNode, SkillNodeStates.Desired)
             const nodesToFind = def.Nodes.map(node => node.skill);
             const nodesFound: Number[] = []
 
@@ -141,7 +142,7 @@ export class SkillTreeUtilities {
             for (const [node, effect] of def.MasteryEffects) {
                 if (!nodesFound.includes(node.skill)) continue;
                 this.skillTreeData.addStateById(`${node.skill}`, SkillNodeStates.Desired)
-                this.skillTreeData.masteryEffects[node.skill] = effect;
+                //this.skillTreeData.masteryEffects[node.skill] = effect;
             }
 
             for (const node of def.Desired) {

@@ -20,7 +20,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
     }
 
     Execute(shortestPathAlgorithm: ShortestPathToDesiredAlgorithm): void {
-        const debug = true
+        const debug = false
         const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => !node.is(SkillNodeStates.Desired) && node.classStartIndex === undefined && !node.isAscendancyStart)
         for (const node of nodesToDisable) {
             this.skillTreeData.removeState(node, SkillNodeStates.Active);
@@ -221,13 +221,14 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             }
 
 
-            for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isWormhole)) {
-                desiredGroupDistances[node.id] = 1.5;
-            }
+            // for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isWormhole)) {
+            //     desiredGroupDistances[node.id] = 1.50;
+            // }
         }
 
         if (nodeGroups.length > 1) {
             let count = 0
+            let firstRun = true;
             while (nodeGroups.length > 1) {
                 if (debug) console.log('Groups length: ' + nodeGroups.length)
                 if (++count > 200) {
@@ -280,15 +281,29 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
                 function compareLengths(a: SkillNode[], b: SkillNode[]) {
                     let sumA = a.length;
+                    let aWormholes = a.filter(node => node.isWormhole).length
                     let sumB = b.length;
+                    let bWormholes = b.filter(node => node.isWormhole).length
+
+                    if(firstRun){
+                        let aClassStart = a.some(node => node.classStartIndex !== undefined);
+                        let bClassStart = b.some(node => node.classStartIndex !== undefined);
+                        if(aClassStart && bClassStart) return 0;
+                        if(aClassStart && !bClassStart) return 1;
+                        if(!aClassStart && bClassStart) return -1;
+                    }
 
                     if (sumA === undefined || sumB === undefined) return 0;
                     if (sumA < sumB) return -1;
                     if (sumA > sumB) return 1;
+                    if(aWormholes < bWormholes) return -1;
+                    if(aWormholes > bWormholes) return 1;
                     return 0;
                 }
                 paths.sort(compareOccurences)
                 paths.sort(compareLengths)
+
+                if(groupsToCheck.filter(group => group.some(node => node.classStartIndex !== -1)).length === 1) firstRun = false;
 
                 if (paths.length == 0) {
                     if (debug) console.log('No paths found')

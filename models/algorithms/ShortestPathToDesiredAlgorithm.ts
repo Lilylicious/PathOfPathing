@@ -6,7 +6,7 @@ import { FibonacciHeap } from 'mnemonist';
 
 export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
     Execute(treeData: SkillTreeData, nodeGroup: SkillNode[], nodeDistanceWeights: { [nodeId: string]: number }, wantDebug: boolean): SkillNode[][] {
-        wantDebug = false//nodeGroup[0].skill === 18174
+        wantDebug = false//nodeGroup[0].skill === 4259
         if(nodeGroup.length === 0) return new Array<Array<SkillNode>>();
 
         const nodesChecked: string[] = [];
@@ -153,7 +153,7 @@ export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
         let returnPath = pathsFound.pop();
         while(returnPath !== undefined) {
             if (wantDebug) console.log(returnPath.length, shortestPath)
-            if(returnPath.length - 2 == shortestPath) {
+            if((returnPath.length - 2) <= shortestPath) {
                 paths.push(returnPath)
             } else {
                 break;
