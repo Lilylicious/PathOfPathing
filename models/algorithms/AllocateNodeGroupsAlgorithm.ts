@@ -85,6 +85,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
         }
 
         const travelStats = ['1% increased quantity of items found in your maps', '3% increased scarabs found in your maps', '2% increased effect of modifiers on your maps', '2% chance for one monster in each of your maps to drop an additional connected map']
+        
         for (const index in nodeGroups) {
             if (nodeGroups[index].some(node => node.classStartIndex !== undefined)) continue;
 
@@ -101,7 +102,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
                 for (const adjacentId of adjacent) {
                     const adjacentNode = this.skillTreeData.nodes[adjacentId];
-                    if (adjacentNode.stats.some(stat => travelStats.includes(stat.toLowerCase()))) {
+                    if (adjacentNode.isRegular1 || adjacentNode.stats.some(stat => travelStats.includes(stat.toLowerCase()))) {
                         exitNodes.push(adjacentNode);
                     } else {
                         frontier.push(adjacentNode);
@@ -131,9 +132,10 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                 if (!groupFound) {
                     nodeGroups.push([node]);
                 }
-            }
-
+            }    
         }
+        
+        
         //console.log(nodeGroups)
         //return;
 
