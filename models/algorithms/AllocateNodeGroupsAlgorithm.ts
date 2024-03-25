@@ -2,9 +2,11 @@ import { SkillTreeData } from "../SkillTreeData";
 import { IAllocationAlgorithm } from "./IAllocationAlgorithm";
 import { SkillNode, SkillNodeStates } from "../SkillNode";
 import { ShortestPathToDesiredAlgorithm } from "./ShortestPathToDesiredAlgorithm";
+import { ShortestPathAlgorithm } from "./ShortestPathAlgorithm";
 import { versions } from "../versions/verions";
 import FibonacciHeap from "mnemonist/fibonacci-heap";
 import { beforeAll } from "bun:test";
+import { group } from "console";
 
 
 export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
@@ -18,7 +20,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
     }
 
     Execute(shortestPathAlgorithm: ShortestPathToDesiredAlgorithm): void {
-        const debug = false
+        const debug = true
         const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => !node.is(SkillNodeStates.Desired) && node.classStartIndex === undefined && !node.isAscendancyStart)
         for (const node of nodesToDisable) {
             this.skillTreeData.removeState(node, SkillNodeStates.Active);
@@ -46,9 +48,11 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             let node2: SkillNode | undefined = undefined;
             for (const group of nodeGroups) {
                 for (const node of group) {
+                    if (node.isMastery) continue;
                     const adjacents = [...node.in, ...node.out];
                     for (const adjacent of adjacents) {
                         const adjacentNode = this.skillTreeData.nodes[adjacent];
+                        if (adjacentNode.isMastery) continue;
                         if (adjacentNode.is(SkillNodeStates.Active) && !group.includes(adjacentNode)) {
                             node1 = node;
                             node2 = adjacentNode;
@@ -85,7 +89,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
         }
 
         const travelStats = ['1% increased quantity of items found in your maps', '3% increased scarabs found in your maps', '2% increased effect of modifiers on your maps', '2% chance for one monster in each of your maps to drop an additional connected map']
-        
+
         for (const index in nodeGroups) {
             if (nodeGroups[index].some(node => node.classStartIndex !== undefined)) continue;
 
@@ -132,10 +136,10 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                 if (!groupFound) {
                     nodeGroups.push([node]);
                 }
-            }    
+            }
         }
-        
-        
+
+
         //console.log(nodeGroups)
         //return;
 
@@ -234,8 +238,12 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                 const paths: SkillNode[][] = [];
 
                 const groupsToCheck = nodeGroups.length > 2 ? nodeGroups.filter(group => !group.some(node => node.classStartIndex !== undefined)) : nodeGroups;
+                const nonMasteriesLeft = groupsToCheck.some(group => group.every(node => !node.isMastery))
 
                 for (const group of groupsToCheck) {
+
+                    if ((nonMasteriesLeft && group.length === 1) && (group[0].isMastery && [...new Set([...group[0].in, ...group[0].out])].map(id => this.skillTreeData.nodes[id]).some(adjacent => adjacent.is(SkillNodeStates.Active) || adjacent.is(SkillNodeStates.Desired))))
+                        continue;
                     const newPaths = shortestPathAlgorithm.Execute(this.skillTreeData, group, desiredGroupDistances, false);
                     for (const path of newPaths) {
                         if (path.length > 0)
@@ -340,6 +348,17 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             }
         }
 
+        // //Handle nodes connected through a mastery
+        // const shortestPathAlgo = new ShortestPathAlgorithm();
+        // const desiredMasteries = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired)).filter(node => node.isMastery)
+
+        // for(const mastery of desiredMasteries){
+        //     const adjacentDesireds = [...new Set([...mastery.in, ...mastery.out])].filter(id => this.skillTreeData.nodes[id].is(SkillNodeStates.Desired));
+        //     for(const adjacentId of adjacentDesireds){
+        //         const adjacentNode = this.skillTreeData.nodes[adjacentId]
+        //         const ophaned = [...new Set([...adjacentNode.in, ...adjacentNode.out])].some(id => !this.skillTreeData.nodes[id].is(SkillNodeStates.Desired) && this.skillTreeData.nodes[id].is(SkillNodeStates.Active));
+        //     }
+        // }
 
         // //Cull extra nodes
         // const requiredNodes: { [id: string]: SkillNode } = {};
