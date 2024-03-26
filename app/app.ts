@@ -27,7 +27,7 @@ export class App {
 
             let options: ISkillTreeOptions | undefined = undefined;
             const semver = new SemVer(i);
-            var file = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree.json`).then(response => response.json());
+            var file = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree.json?123`).then(response => response.json());
             var json = file as ISkillTreeBase;
             //this.SetupPregeneration(file)
 
