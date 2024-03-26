@@ -117,7 +117,7 @@ export class App {
             const content = document.getElementById("skillTreeStats_Content") as HTMLDivElement;
             const stats = document.getElementById("skillTreeStats") as HTMLDivElement;
             if (content.toggleAttribute('hidden')) {
-                stats.style.setProperty('height', 'fit-content');
+                stats.style.setProperty('height', '1.6em');
                 showhide.innerText = "Show stats";
             } else {
                 stats.style.setProperty('height', `80%`);
@@ -366,15 +366,24 @@ export class App {
 
         const groups: { [group: string]: string[] } = {};
         const statGroup: { [stat: string]: string } = {};
-        const stats: { [stat: string]: number } = {};
+        const statsSummed: { [stat: string]: string[] } = {};
         const nodes = this.skillTreeData.getSkilledNodes();
         for (const id in nodes) {
             const node = nodes[id];
             for (const stat of node.stats) {
-                if (stats[stat] === undefined) {
-                    stats[stat] = 1;
+                const matches = stat.match('^(\\D*)([\\d\.]+)(\\D*.*)$')
+                //0 is full string, then it's capture groups
+                if(matches !== null) {
+                    const statName = matches[1] + matches[3];
+                    const value = Number(matches[2]);
+
+                    if(statsSummed[statName] !== undefined){
+                        statsSummed[statName][0] = String(Number(statsSummed[statName][0]) + value)
+                    } else {
+                        statsSummed[statName] = [String(value), matches[1], matches[3]]
+                    }
                 } else {
-                    stats[stat] = stats[stat] + 1;
+                    statsSummed[stat] = ['', stat, '']
                 }
 
                 if (statGroup[stat] !== undefined) {
@@ -434,16 +443,23 @@ export class App {
         }
 
         for (const name of Object.keys(groups).sort((a, b) => a === defaultGroup ? -1 : (b === defaultGroup ? 1 : (a < b) ? -1 : 1))) {
-            const groupStats: { [stat: string]: number } = {};
+            const groupStats: { [stat: string]: string[] } = {};
             for (const stat of groups[name]) {
-                groupStats[stat] = stats[stat];
+                const matches = stat.match('^(\\D*)([\\d\.]+)(\\D*.*)$')
+                const regexStatname = matches !== null ? matches[1] + matches[3] : undefined;
+
+                if(regexStatname !== undefined){
+                    groupStats[regexStatname] = statsSummed[regexStatname];
+                } else {
+                    groupStats[stat] = statsSummed[stat];
+                }
             }
-            const div = this.createStatGroup(name, groupStats);
+            const div = this.createSummedStatGroup(name, groupStats);
             content.appendChild(div);
         }
     }
 
-    private createStatGroup = (name: string, stats: { [stat: string]: number }): HTMLDivElement => {
+    private createSummedStatGroup = (name: string, stats: { [stat: string]: string[] }): HTMLDivElement => {
         const group = document.createElement("div");
         group.className = "group";
 
@@ -460,8 +476,8 @@ export class App {
         group.appendChild(title);
 
         for (const stat of Object.keys(stats).sort()) {
-            const num = stats[stat];
-            group.appendChild(this.createStat(name, `${num}x ${stat}`));
+            const str = stats[stat][1] + stats[stat][0] + stats[stat][2];
+            group.appendChild(this.createStat(name, str));
         }
 
         return group;

@@ -162,7 +162,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             let firstRun = true;
             while (nodeGroups.length > 1) {
                 if (debug) console.log('Groups length: ' + nodeGroups.length)
-                if (++count > 200) {
+                if (++count > 400) {
                     console.log('Infinite loop detection triggered. Please report this as a bug.')
                     break;
                 }

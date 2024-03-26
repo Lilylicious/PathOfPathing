@@ -147,7 +147,7 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
             let count = 0
             let firstPath = true;
             while (desiredNodes.length > 0) {
-                if (++count > 100) {
+                if (++count > 200) {
                     console.log('Infinite loop detection triggered. Please report this as a bug.')
                     break;
                 }

@@ -34,7 +34,7 @@ body {
     position: fixed;
     bottom: 2em;
     left: 0;
-    height: fit-content;
+    height: 1.6em;
     width: 22.4em;
     background: #333;
     border: 1px solid #999;
@@ -46,7 +46,7 @@ body {
 }
 
     .skillTreeStats .group {
-        padding-top: 0.5em;
+        padding-top: 2em;
     }
 
         .skillTreeStats .group .title {
