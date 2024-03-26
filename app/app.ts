@@ -475,7 +475,14 @@ export class App {
 
         group.appendChild(title);
 
-        for (const stat of Object.keys(stats).sort()) {
+        for (const stat of Object.keys(stats).sort((a,b) => {
+            const aChance = a.toLowerCase().includes('chance to contain');
+            const bChance = b.toLowerCase().includes('chance to contain');
+
+            if(aChance && !bChance) return -1;
+            if(!aChance && bChance) return 1;
+            return 0;
+        })) {
             const str = stats[stat][1] + stats[stat][0] + stats[stat][2];
             group.appendChild(this.createStat(name, str));
         }
