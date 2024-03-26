@@ -25,4 +25,7 @@ interface ISkillNodeV1 extends IRootNodeV1 {
 
     /** The pregenerated distance to other nodes */
     distance: { [key: string]: number }
+
+    /** The pregenerated earliest mandatory node */
+    earliestMandatoryNode: number;
 }

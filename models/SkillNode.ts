@@ -71,6 +71,7 @@ export class SkillNode implements ISkillNode {
     hoverText: string | null = null;
     patch: SemVer;
     distance: { [node: string]: number };
+    earliestMandatoryNode: number;
 
     constructor(id: string, node: ISkillNode, group: IGroup | undefined, orbitRadii: Array<number>, orbitAngles: { [orbit: number]: Array<number> }, scale: number, patch: SemVer) {
         this.id = id;
@@ -108,6 +109,7 @@ export class SkillNode implements ISkillNode {
         this.skill = node.skill;
         this.stats = node.stats;
         this.distance = node.distance;
+        this.earliestMandatoryNode = node.earliestMandatoryNode;
 
         this.state = SkillNodeStates.None;
 

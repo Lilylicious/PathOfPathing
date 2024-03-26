@@ -88,56 +88,43 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             }
         }
 
-        const travelStats = ['1% increased quantity of items found in your maps', '3% increased scarabs found in your maps', '2% increased effect of modifiers on your maps', '2% chance for one monster in each of your maps to drop an additional connected map']
+        const travelStats = ['0.5% chance for map drops to be duplicated', '1% increased quantity of items found in your maps', '3% increased scarabs found in your maps', '2% increased effect of modifiers on your maps', '2% chance for one monster in each of your maps to drop an additional connected map']
 
         for (const index in nodeGroups) {
             if (nodeGroups[index].some(node => node.classStartIndex !== undefined)) continue;
+            
+            for(const node of nodeGroups[index]){
+                const earliestMandatoryNodeId = node.earliestMandatoryNode
 
-            const frontier = [...nodeGroups[index]];
-            const exitNodes: SkillNode[] = [];
-            const visited: SkillNode[] = [];
-
-            while (frontier.length > 0) {
-                const frontierNode = frontier.shift();
-                if (frontierNode === undefined) break;
-                const adjacent = [...new Set([...frontierNode.in, ...frontierNode.out])].filter(id =>
-                    !([...exitNodes, ...visited].map(node => node.GetId())).includes(id)
-                );
-
-                for (const adjacentId of adjacent) {
-                    const adjacentNode = this.skillTreeData.nodes[adjacentId];
-                    if (adjacentNode.isRegular1 || adjacentNode.stats.some(stat => travelStats.includes(stat.toLowerCase()))) {
-                        exitNodes.push(adjacentNode);
-                    } else {
-                        frontier.push(adjacentNode);
-                        visited.push(adjacentNode);
-                    }
-                }
-            }
-
-            if (exitNodes.length === 1) {
-                const node = exitNodes[0];
-
-                this.skillTreeData.addState(node, SkillNodeStates.Active);
-
-                const adjacents = [...new Set([...node.in, ...node.out])]
-                let groupFound = false;
-                for (const index in nodeGroups) {
-                    if (nodeGroups[index].map(groupNode => groupNode.GetId()).includes(node.GetId()))
-                        continue;
-
-                    if (nodeGroups[index].some(groupNode => adjacents.includes(groupNode.GetId()))) {
-                        nodeGroups[index].push(node);
-                        groupFound = true;
-                        break;
-                    }
+                if(earliestMandatoryNodeId === node.skill){
+                    continue;
                 }
 
-                if (!groupFound) {
-                    nodeGroups.push([node]);
+                const earliestMandatoryNode = this.skillTreeData.nodes[earliestMandatoryNodeId];
+
+                if(!earliestMandatoryNode.is(SkillNodeStates.Active)){
+                    this.skillTreeData.addState(earliestMandatoryNode, SkillNodeStates.Active);
+
+                    const adjacents = [...new Set([...earliestMandatoryNode.in, ...earliestMandatoryNode.out])]
+                    let groupFound = false;
+                    for (const index in nodeGroups) {
+                        if (nodeGroups[index].map(groupNode => groupNode.GetId()).includes(earliestMandatoryNode.GetId()))
+                            continue;
+
+                        if (nodeGroups[index].some(groupNode => adjacents.includes(groupNode.GetId()))) {
+                            nodeGroups[index].push(earliestMandatoryNode);
+                            groupFound = true;
+                            break;
+                        }
+                    }
+
+                    if (!groupFound) {
+                        nodeGroups.push([earliestMandatoryNode]);
+                    }
                 }
             }
         }
+        return;
 
 
         //console.log(nodeGroups)

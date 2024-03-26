@@ -173,45 +173,26 @@ export class App {
 
     private SetupPregeneration = (file) => {
         
+        //Every node
         const sourceNodes = Object.values(file.nodes).map(node => node.skill);
         let destinationNodes = []
-
-        // let sourceNodes = Object.values(file.nodes).filter(
-        //     node => node.ascendancyName === undefined && node.group !== 0 
-        //     && (node.isNotable === true || node.isKeystone === true) 
-        //     && ((node.out !== undefined && node.out.length > 0) 
-        //     || (node.in !== undefined && node.in.length > 0))).map(node => Number(node.skill));
-
-        for (const nodeId of file.nodes.root.out){
-            let actualNodes = []
-            actualNodes.push(...file.nodes[nodeId].out)
-            actualNodes.push(...file.nodes[nodeId].in)
-            for (const secondNodeId of actualNodes) {
-                let startNode = file.nodes[secondNodeId]
-                if (startNode.isAscendancyStart === undefined){
-                    destinationNodes.push(Number(secondNodeId))
-                }
-                    
-            }
-        }
-        //const destinationNodes = sourceNodes;
-        
-        this.PreGenerateShortestDistances(file, sourceNodes, destinationNodes);
+        this.PreGenerateShortestDistances(file, sourceNodes);
     }
 
-    private PreGenerateShortestDistances = (file, sourceNodes, destinationNodes) => {
+    private PreGenerateShortestDistances = (file, sourceNodes) => {
         let verbose = false
         
         const nodes = file.nodes
         console.log('Shortest distances started')
-        for (const nodeId in nodes){
-            file.nodes[nodeId].distance = {}
-        }
-        console.log('Reset done')
+        // for (const nodeId in nodes){
+        //     file.nodes[nodeId].earliestMandatoryNode = {}
+        // }
+        // console.log('Reset done')
+
+        const travelStats = ['0.5% chance for map drops to be duplicated', '1% increased quantity of items found in your maps', '3% increased scarabs found in your maps', '2% increased effect of modifiers on your maps', '2% chance for one monster in each of your maps to drop an additional connected map', '+10 to strength', '+10 to intelligence', '+10 to dexterity']
 
         let count = 0
         console.log('Checking ' + sourceNodes.length + '')
-        console.log(destinationNodes)
         for (const sourceId of sourceNodes){   
             if (sourceId === "root"){
                 console.log('Skipping root')
@@ -223,63 +204,64 @@ export class App {
                 continue;
             }
             
-            // if(file.tree.slice(0,5) === 'Atlas' && nodes[sourceId].isMastery !== 'undefined'){
-            //     console.log('Skipping mastery')
-            //     continue;
-            // }
-            //const sourceId = 6
             if (file.tree.slice(0,5) !== 'Atlas' && nodes[sourceId].ascendancyName !== undefined){
+                console.log('Skipping ascendancy node')
                 continue;
             }      
 
-            //console.log('Skipping mastery')
-
             if((nodes[sourceId].out === undefined && nodes[sourceId].in === undefined)
             || (nodes[sourceId].out && nodes[sourceId].out.length === 0 && nodes[sourceId].in && nodes[sourceId].in.length === 0)){
-                console.log('Skipping no out or in')
+                console.log('Skipping no adjacent nodes')
                 continue;
             }
 
             // if(count > 100)
             //     break;
 
-            let distance: { [id: string]: number } = {};
-            distance[sourceId] = 0;
-            const frontier: Array<SkillNode> = [nodes[sourceId]];
-            const explored: { [id: string]: SkillNode } = {}
+            const frontier = [nodes[sourceId]];
+            const exitNodes: number[] = [];
+            const visited: number[] = [sourceId];
+            let earliestMandatoryNode: number;
+            let splitFound = false;
+
             while (frontier.length > 0) {
+                count++
                 const current = frontier.shift();
                 if (current === undefined) {
                     continue;
                 }
-                if(sourceId === 65499 && current.skill === 5515){
-                    console.log('verbose enabled')
-                    verbose = true
-                }
+                // if(sourceId === 65499 && current.skill === 5515){
+                //     console.log('verbose enabled')
+                //     verbose = true
+                // }
                 
-                //console.log('Checking', sourceId + ': ' + current.skill)
-                explored[current.skill] = current;
-                const dist = distance[current.skill];
-                let actualNodes = []
-                if(current.out)actualNodes.push(...current.out)
-                if(current.in)actualNodes.push(...current.in)
-                for (const id of actualNodes) {
-                    const out = nodes[id];
-                    if (out.ascendancyName !== "" && out.ascendancyName !== undefined) {
-                        continue;
-                    }
-                    if (explored[id] || distance[id]) {
-                        continue;
-                    }
-
-                    if(destinationNodes.includes(Number(id))){
-                        file.nodes[sourceId].distance[id] = dist + 1;
-                    }
-    
-                    count++
-                    distance[id] = dist + 1;
-                    frontier.push(out);
+                console.log('Checking', sourceId + ': ' + current.skill)
+                const adjacent = [...new Set([...current.in, ...current.out])].filter(id =>
+                    ![...exitNodes, ...visited].includes(Number(id))
+                );
+                if(!splitFound){
+                    earliestMandatoryNode = current.skill;
+                    if(adjacent.length > 1) splitFound = true;
                 }
+
+                for (const adjacentId of adjacent) {
+                    const adjacentNode: SkillNode = nodes[adjacentId];
+                    if (adjacentNode.isRegular1 || adjacentNode.stats.some(stat => travelStats.includes(stat.toLowerCase()))) {
+                        exitNodes.push(adjacentNode.skill);
+                        console.log('Exitnode')
+                    } else {
+                        frontier.push(adjacentNode);
+                        visited.push(adjacentNode.skill);
+                        console.log('Visited')
+                    }
+                }
+
+            }
+
+            if (exitNodes.length === 1) {
+                nodes[sourceId].earliestMandatoryNode = exitNodes[0]
+            } else {
+                nodes[sourceId].earliestMandatoryNode = earliestMandatoryNode!;
             }
         }
         console.log('Total frontier checks: ' + count);
@@ -287,7 +269,7 @@ export class App {
         var a = document.createElement("a");
         var newFile = new Blob([JSON.stringify(file, null, 4)], {type: 'text/plain'});
         a.href = URL.createObjectURL(newFile);
-        a.download = 'UpdatedTree.json';
+        a.download = 'updated.json';
         a.click();
     }
 
