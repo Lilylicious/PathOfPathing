@@ -34,14 +34,14 @@ export class UIEvents {
         if (!this.dragged) {
             UIEvents.clickSkillTree(point, this.skillTreeData);
         }
-        this.cancelDrag();
+        setTimeout(() => this.cancelDrag(), 250)
     }
 
     private rightup = (point: IPoint) => {
         if (!this.dragged) {
             UIEvents.rightClickSkillTree(point, this.skillTreeData);
         }
-        this.cancelDrag();
+        setTimeout(() => this.cancelDrag(), 250)
     }
 
     private static clickSkillTree = (point: IPoint, skillTree: SkillTreeData) => {
