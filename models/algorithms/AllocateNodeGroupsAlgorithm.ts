@@ -124,64 +124,6 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                 }
             }
         }
-        return;
-
-
-        //console.log(nodeGroups)
-        //return;
-
-
-        // const singleEntranceNodes: { [node: string]: number } = {}
-        // for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isMastery)) {
-        //     const debugSingleEntrance = false//node.skill === 1240
-        //     const groupNodes = node.nodeGroup?.nodes
-        //     if (groupNodes === undefined) continue;
-        //     const nodes = [...groupNodes]
-        //     if(this.skillTreeData.tree.slice(0,5) === 'Atlas'){
-        //         if (nodes.includes('65499')) nodes.push('54499', '55003')
-        //         if (nodes.includes('19599')) nodes.push('9338', '50203', '5515')
-        //         if (nodes.includes('60105')) nodes.push('62161', '4703', '27878')
-        //         if (nodes.includes('26320')) nodes.push('44872', '59578', '41869')
-        //         if (nodes.includes('1240')) nodes.push('50610', '3198', '54101')
-        //     }
-
-        //     const potentialOutsideNodes: SkillNode[] = []
-
-        //     for (const id of nodes) {
-        //         if (debugSingleEntrance) console.log('Checking group node ' + id)
-        //         const searchNode = this.skillTreeData.nodes[id];
-        //         if(searchNode === undefined) continue;
-        //         const adjacent = [...searchNode.in, ...searchNode.out]
-        //         for (const adjacentId of adjacent) {
-        //             if (debugSingleEntrance) console.log('Checking adjacent node ' + adjacentId)
-        //             const adjacentNode = this.skillTreeData.nodes[adjacentId];
-        //             //if(!nodes.includes(adjacentId) || adjacentNode.stats.map(stat => stat.toLocaleLowerCase()).some(stat => travelStats.includes(stat))){
-        //             for (const stat of adjacentNode.stats) {
-        //                 if (debugSingleEntrance) console.log('Checking stat ' + stat.toLocaleLowerCase())
-        //                 if (travelStats.includes(stat.toLowerCase()) && !potentialOutsideNodes.includes(adjacentNode)) {
-        //                     if (debugSingleEntrance) console.log('Adding outside node ' + adjacentId)
-        //                     potentialOutsideNodes.push(adjacentNode);
-        //                 }
-        //             }
-        //             //}
-        //         }
-
-        //     }
-
-        //     if (debugSingleEntrance) console.log('potential outside nodes length' + potentialOutsideNodes.length)
-        //     if (potentialOutsideNodes.length === 1) {
-        //         for (const id of nodes) {
-        //             singleEntranceNodes[id] = potentialOutsideNodes[0].skill;
-        //         }
-        //     }
-        // }
-
-        // for (const desiredNode of desiredNodes) {
-        //     if (singleEntranceNodes[desiredNode.id]) {
-        //         desiredGroupDistances[singleEntranceNodes[desiredNode.id]] = 0;
-        //     }
-        // }
-
 
 
         const travelNodes = Object.values(this.skillTreeData.nodes).filter(node => this.skillTreeData.tree === 'Default' ? node.isRegular1 : (node.isRegular2 && node.stats.some(stat => travelStats.includes(stat.toLowerCase()))));
