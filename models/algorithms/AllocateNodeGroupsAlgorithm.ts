@@ -78,7 +78,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
 
         const desiredAdjustment = 0.01;
-        const desiredGroupDistances = this.adjustDesiredGroupDistances(desiredNodesUnsorted.filter(node => node.isNotable), desiredAdjustment)
+        const desiredGroupDistances = this.adjustDesiredGroupDistances(desiredNodesUnsorted.filter(node => node.isNotable), desiredAdjustment * 3)
 
         for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isNotable)) {
             desiredGroupDistances[node.skill] = desiredGroupDistances[node.skill] ? desiredGroupDistances[node.skill] - 0.5 : 0.5;
@@ -127,9 +127,8 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
 
         const travelNodes = Object.values(this.skillTreeData.nodes).filter(node => this.skillTreeData.tree === 'Default' ? node.isRegular1 : (node.isRegular2 && node.stats.some(stat => travelStats.includes(stat.toLowerCase()))));
-
         for (const travelNode of travelNodes) {
-            desiredGroupDistances[travelNode.id] = desiredGroupDistances[travelNode.id] !== undefined ? desiredGroupDistances[travelNode.id] * desiredAdjustment : 1 - desiredAdjustment;
+            desiredGroupDistances[travelNode.id] = desiredGroupDistances[travelNode.id] !== undefined ? desiredGroupDistances[travelNode.id] - desiredAdjustment : 1 - desiredAdjustment;
         }
 
 
