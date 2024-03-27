@@ -378,7 +378,9 @@ export class App {
                     const value = Number(matches[2]);
 
                     if(statsSummed[statName] !== undefined){
-                        statsSummed[statName][0] = String((Number(statsSummed[statName][0]) + value).toFixed(2))
+                        let updatedStat = String((Number(statsSummed[statName][0]) + value).toFixed(2))
+                        if(updatedStat.endsWith('.00')) updatedStat = updatedStat.substring(0, updatedStat.length - 3)
+                        statsSummed[statName][0] = updatedStat;
                     } else {
                         statsSummed[statName] = [String(value), matches[1], matches[3]]
                     }
