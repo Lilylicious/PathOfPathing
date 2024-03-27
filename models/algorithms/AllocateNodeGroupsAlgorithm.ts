@@ -356,6 +356,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                 const currentNode = frontier.shift();
                 if (currentNode === undefined) break;
                 explored2[currentNode.GetId()] = currentNode
+                if(currentNode.isMastery) continue;
 
                 const adjacent = [...new Set([...currentNode.out, ...currentNode.in])]
                     .filter(id => !explored2[id])
