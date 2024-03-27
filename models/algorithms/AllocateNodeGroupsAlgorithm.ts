@@ -96,7 +96,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             for(const node of nodeGroups[index]){
                 const earliestMandatoryNodeId = node.earliestMandatoryNode
 
-                if(earliestMandatoryNodeId === node.skill || node.ascendancyName !== undefined){
+                if(earliestMandatoryNodeId === node.skill || (node.ascendancyName !== undefined && node.ascendancyName !== '')){
                     continue;
                 }
 
