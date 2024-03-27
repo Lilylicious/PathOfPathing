@@ -87,8 +87,8 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         this.viewport.fitWorld(true);
         this.viewport.zoomPercent(1.726);
 
-        this.viewport.on('pointerdown', (event) => SkillTreeEvents.viewport.fire("down", this.viewport.toWorld(event.global)));
-        this.viewport.on('pointermove', (event) => SkillTreeEvents.viewport.fire("move", this.viewport.toWorld(event.global)));
+        this.viewport.on('pointerdown', (event) => SkillTreeEvents.viewport.fire("down", this.viewport.toScreen(event.global)));
+        this.viewport.on('pointermove', (event) => SkillTreeEvents.viewport.fire("move", [this.viewport.toWorld(event.global), this.viewport.toScreen(event.global)]));
         this.viewport.on('pointerup', (event) => SkillTreeEvents.viewport.fire("up", this.viewport.toWorld(event.global)));
         this.viewport.on('rightup', (event) => SkillTreeEvents.viewport.fire("rightup", this.viewport.toWorld(event.global)));
         this.viewport.on('pointercancel', () => SkillTreeEvents.viewport.fire("cancel"));
