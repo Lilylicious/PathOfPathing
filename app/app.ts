@@ -153,6 +153,13 @@ export class App {
             SkillTreeEvents.controls.fire("pause-change");
         });
 
+       
+        // Browser zoom messes things up, so disable that
+        document.getElementById('skillTreeContainer')!.addEventListener('wheel', event => {
+            if (event.ctrlKey) {
+              event.preventDefault()
+            }
+          }, true)
         
 
         const container = document.getElementById("skillTreeContainer");
