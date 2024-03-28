@@ -55,7 +55,8 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             height: window.innerHeight,
             resolution: devicePixelRatio,
             sharedTicker: true,
-            backgroundColor: skillTreeData.patch.compare(version) >= 0 ? 0x070b10 : 0x1a1411
+            backgroundColor: skillTreeData.patch.compare(version) >= 0 ? 0x070b10 : 0x1a1411,
+            powerPreference: "high-performance",            
         });
         PIXI.Ticker.shared.stop();
         PIXI.Ticker.system.stop();
