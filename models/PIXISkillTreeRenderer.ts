@@ -70,7 +70,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         Assets.reset();
 
         const zoomPercent = this.skillTreeData.imageZoomLevels.length > 2 ? this.skillTreeData.imageZoomLevels[1] - this.skillTreeData.imageZoomLevels[0] : .1;
-        const defaultZoomLimits = { minWidth: this.skillTreeData.width * (zoomPercent / 2), minHeight: this.skillTreeData.height * (zoomPercent / 2), maxWidth: this.skillTreeData.width * (zoomPercent * 15), maxHeight: this.skillTreeData.height * (zoomPercent * 15) };
+        const defaultZoomLimits = { minWidth: this.skillTreeData.width * (zoomPercent / 2), minHeight: this.skillTreeData.height * (zoomPercent / 2), maxWidth: this.skillTreeData.width * (zoomPercent * 30), maxHeight: this.skillTreeData.height * (zoomPercent * 30) };
         this.viewport = new Viewport({
             screenWidth: this.pixi.renderer.width,
             screenHeight: this.pixi.renderer.height,

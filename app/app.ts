@@ -160,6 +160,12 @@ export class App {
               event.preventDefault()
             }
           }, true)
+
+        document.addEventListener('keydown', function(event: KeyboardEvent) {
+            if ((event.ctrlKey || event.metaKey) && (event.key === '+' || event.key === '-'|| event.key==='=')) {
+                event.preventDefault();
+              }
+        });
         
 
         const container = document.getElementById("skillTreeContainer");
