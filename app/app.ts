@@ -384,7 +384,9 @@ export class App {
         for (const id in nodes) {
             const node = nodes[id];
             for (const stat of node.stats) {
-                const matches = stat.match('^(\\D*)([\\d\.]+)(\\D*.*)$')
+                const tierMapsMatch = stat.match('^(Tier 1-15.*have )([\\d\.]+)(%\\D*.*)$')
+                console.log(tierMapsMatch)
+                const matches = tierMapsMatch !== null ? tierMapsMatch : stat.match('^(\\D*)([\\d\.]+)(\\D*.*)$')
                 //0 is full string, then it's capture groups
                 if(matches !== null) {
                     const statName = matches[1] + matches[3];
@@ -460,7 +462,9 @@ export class App {
         for (const name of Object.keys(groups).sort((a, b) => a === defaultGroup ? -1 : (b === defaultGroup ? 1 : (a < b) ? -1 : 1))) {
             const groupStats: { [stat: string]: string[] } = {};
             for (const stat of groups[name]) {
-                const matches = stat.match('^(\\D*)([\\d\.]+)(\\D*.*)$')
+                const tierMapsMatch = stat.match('^(Tier 1-15.*have )([\\d\.]+)(%\\D*.*)$')
+                console.log(tierMapsMatch)
+                const matches = tierMapsMatch !== null ? tierMapsMatch : stat.match('^(\\D*)([\\d\.]+)(\\D*.*)$')
                 const regexStatname = matches !== null ? matches[1] + matches[3] : undefined;
 
                 if(regexStatname !== undefined){
