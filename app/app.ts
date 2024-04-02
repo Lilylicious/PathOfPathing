@@ -385,7 +385,6 @@ export class App {
             const node = nodes[id];
             for (const stat of node.stats) {
                 const tierMapsMatch = stat.match('^(Tier 1-15.*have )([\\d\.]+)(%\\D*.*)$')
-                console.log(tierMapsMatch)
                 const matches = tierMapsMatch !== null ? tierMapsMatch : stat.match('^(\\D*)([\\d\.]+)(\\D*.*)$')
                 //0 is full string, then it's capture groups
                 if(matches !== null) {
@@ -463,7 +462,6 @@ export class App {
             const groupStats: { [stat: string]: string[] } = {};
             for (const stat of groups[name]) {
                 const tierMapsMatch = stat.match('^(Tier 1-15.*have )([\\d\.]+)(%\\D*.*)$')
-                console.log(tierMapsMatch)
                 const matches = tierMapsMatch !== null ? tierMapsMatch : stat.match('^(\\D*)([\\d\.]+)(\\D*.*)$')
                 const regexStatname = matches !== null ? matches[1] + matches[3] : undefined;
 
