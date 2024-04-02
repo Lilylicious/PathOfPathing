@@ -148,6 +148,39 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                 }
             }
 
+            const smallNodes = Object.values(this.skillTreeData.nodes).filter(node => node.isRegular2);
+
+            for(const node of smallNodes) {
+                let isTravelNode = false;
+                for(const stat of node.stats){
+                    if(travelStats.includes(stat.toLowerCase())){
+                        isTravelNode = true;
+                    }
+                }
+
+                if(isTravelNode) continue;
+
+                const adjacent = [...new Set([...node.in, ...node.out])];
+
+                let adjacentTravelNode = false;
+                for(const id of adjacent) {
+                    const adjNode = this.skillTreeData.nodes[id];
+                    for(const stat of adjNode.stats){
+                        if(travelStats.includes(stat.toLowerCase())){
+                            adjacentTravelNode = true;
+                        }
+
+                        if(adjacentTravelNode) {
+                            desiredGroupDistances[node.id] = desiredGroupDistances[node.id] !== undefined ? desiredGroupDistances[node.id] - desiredAdjustment : 1 - desiredAdjustment;
+                            break;
+                        }
+                    }
+                    if(adjacentTravelNode) {
+                        break;
+                    }
+                }
+            }
+
 
             if(this.skillTreeData.nodes['65225'].is(SkillNodeStates.Desired)){
                 for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isRegular2 && node.stats.some(stat => stat.toLowerCase() === '3% increased scarabs found in your maps'))) {
