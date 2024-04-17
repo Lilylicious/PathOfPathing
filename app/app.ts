@@ -164,7 +164,14 @@ export class App {
         document.addEventListener('keydown', function(event: KeyboardEvent) {
             if ((event.ctrlKey || event.metaKey) && (event.key === '+' || event.key === '-'|| event.key==='=')) {
                 event.preventDefault();
-              }
+            }
+
+            if(event.key === 'e'){
+                SkillTreeEvents.controls.fire('increment-max-steps');
+            } else if (event.key === 'r'){
+                SkillTreeEvents.controls.fire('decrement-max-steps');
+            }
+
         });
         
 

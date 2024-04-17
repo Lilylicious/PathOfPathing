@@ -15,7 +15,7 @@ export class AllocateNodesAlgorithm implements IAllocationAlgorithm {
         this.fixedGroups = fixedGroups;
     }
 
-    Execute(shortestPathAlgorithm: ShortestPathAlgorithm): void {
+    Execute(shortestPathAlgorithm: ShortestPathAlgorithm, maxSteps: number): void {
         const debug = false
         const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => node.classStartIndex === undefined && !node.isAscendancyStart)
         for (const node of nodesToDisable) {

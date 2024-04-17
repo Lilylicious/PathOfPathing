@@ -34,6 +34,7 @@ export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
         const distance: { [id: string]: number } = {};
         const explored: { [id: string]: SkillNode } = {};
         const prev: { [id: string]: SkillNode } = {};
+        const pathDistances: { [id: string]: number } = {};
 
         for(const node of nodeGroup){
             frontier.push(node)
@@ -100,6 +101,8 @@ export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
                         //No path found, do what?
                     }
 
+                    pathDistances[foundNode.GetId()] = distance[foundNode.GetId()];
+
                     let current: SkillNode | undefined = foundNode;
                     const idsInGroup = nodeGroup.map(node => node.GetId());
                     const path = new Array<SkillNode>();
@@ -107,11 +110,11 @@ export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
                     while (current !== undefined) {
                         //If the new node is not already part of the current group, add to path
                         if(!idsInGroup.includes(current.GetId())) {
-                            if (wantDebug) console.log('Added ' + current.GetId() + ' to path')
+                            if (wantDebug) console.log('Added ' + current.GetId() + ', ' + current.name + ' to path')
                             path.push(current);
                         } else {
                             if(!foundFirst){
-                                if (wantDebug) console.log('Added ' + current.GetId() + ' to path')
+                                if (wantDebug) console.log('Added ' + current.GetId() + ', ' + current.name + ' to path')
                                 path.push(current)  
                                 foundFirst = true;
                             } 
@@ -125,12 +128,12 @@ export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
                         current = prev[current.GetId()];
                     }
                     
-                    if(path.length > shortestPath * 2){
+                    if(pathDistances[path[0].GetId()] > shortestPath * 2){
                         const paths: SkillNode[][] = []
                         let returnPath = pathsFound.pop();
                         while(returnPath !== undefined) {
-                            if (wantDebug) console.log(returnPath.length, shortestPath)
-                            if(returnPath.length - 2 == shortestPath) {
+                            if (wantDebug) console.log('Path distances', pathDistances[returnPath[0].GetId()], shortestPath)
+                            if(pathDistances[returnPath[0].GetId()] <= shortestPath) {
                                 paths.push(returnPath)
                             } else {
                                 break;
@@ -143,8 +146,8 @@ export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
                         return paths;
                     }
 
-
-                    shortestPath = path.length - 2;
+                    //console.log('Distance', pathDistances[path[0].GetId()])
+                    shortestPath = pathDistances[path[0].GetId()] + 1;
                     pathsFound.push(path.reverse());
                 }
             }
@@ -152,8 +155,9 @@ export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
         const paths: SkillNode[][] = []
         let returnPath = pathsFound.pop();
         while(returnPath !== undefined) {
-            if (wantDebug) console.log(returnPath.length, shortestPath)
-            if((returnPath.length - 2) <= shortestPath) {
+            //console.log(returnPath[returnPath.length - 1].GetId(), returnPath[returnPath.length - 1].name, pathDistances)
+            if (wantDebug) console.log('Path distances 2', pathDistances[returnPath[returnPath.length - 1].GetId()], shortestPath)
+            if(pathDistances[returnPath[returnPath.length - 1].GetId()] <= shortestPath) {
                 paths.push(returnPath)
             } else {
                 break;

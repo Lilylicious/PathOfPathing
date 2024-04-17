@@ -19,7 +19,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
         this.fixedGroups = fixedGroups;
     }
 
-    Execute(shortestPathAlgorithm: ShortestPathToDesiredAlgorithm): void {
+    Execute(shortestPathAlgorithm: ShortestPathToDesiredAlgorithm, maxSteps: number): void {
         const debug = false
         const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active)).filter(node => !node.is(SkillNodeStates.Desired) && node.classStartIndex === undefined && !node.isAscendancyStart)
         for (const node of nodesToDisable) {
@@ -181,6 +181,10 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                 }
             }
 
+            for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isWormhole)) {
+                desiredGroupDistances[node.id] = 1.5;
+            }
+
 
             if(this.skillTreeData.nodes['65225'].is(SkillNodeStates.Desired)){
                 for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isRegular2 && node.stats.some(stat => stat.toLowerCase() === '3% increased scarabs found in your maps'))) {
@@ -192,7 +196,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
         if (nodeGroups.length > 1) {
             let count = 0
-            let firstRun = true;
+            let beforeLastMerge = true;
             while (nodeGroups.length > 1) {
                 if (debug) console.log('Groups length: ' + nodeGroups.length)
                 if (++count > 400) {
@@ -200,9 +204,17 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                     break;
                 }
 
+                
+                if(count > maxSteps) {
+                    // console.log('Map', desiredGroupDistances['64048'] + desiredGroupDistances['57739'] + desiredGroupDistances['10884'])
+                    // console.log('Jun', desiredGroupDistances['44775'] + desiredGroupDistances['43934'])
+                    //return
+                }
+
                 const paths: SkillNode[][] = [];
 
-                const groupsToCheck = nodeGroups.length > 2 ? nodeGroups.filter(group => !group.some(node => node.classStartIndex !== undefined)) : nodeGroups;
+                //const groupsToCheck = nodeGroups.length > 2 ? nodeGroups.filter(group => !group.some(node => node.classStartIndex !== undefined)) : nodeGroups;
+                const groupsToCheck = nodeGroups;
                 const nonMasteriesLeft = groupsToCheck.some(group => group.every(node => !node.isMastery))
 
                 for (const group of groupsToCheck) {
@@ -243,13 +255,12 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                 }
 
 
-                function compareLengths(a: SkillNode[], b: SkillNode[]) {
-                    let sumA = a.length;
-                    let aWormholes = a.filter(node => node.isWormhole).length
-                    let sumB = b.length;
-                    let bWormholes = b.filter(node => node.isWormhole).length
+                function compareWeights(a: SkillNode[], b: SkillNode[]) {
+                    let sumA = a.reduce((sum, currentNode) => sum += currentNode.is(SkillNodeStates.Desired) || currentNode.is(SkillNodeStates.Active) ? 0 : desiredGroupDistances[currentNode.GetId()] ? desiredGroupDistances[currentNode.GetId()] : 1, 0);
+                    let sumB = b.reduce((sum, currentNode) => sum += currentNode.is(SkillNodeStates.Desired) || currentNode.is(SkillNodeStates.Active) ? 0 : desiredGroupDistances[currentNode.GetId()] ? desiredGroupDistances[currentNode.GetId()] : 1, 0);
 
-                    if(firstRun){
+                    // If we're not merging the last two groups, shift an class starts to the end
+                    if(beforeLastMerge){
                         let aClassStart = a.some(node => node.classStartIndex !== undefined);
                         let bClassStart = b.some(node => node.classStartIndex !== undefined);
                         if(aClassStart && bClassStart) return 0;
@@ -260,14 +271,12 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                     if (sumA === undefined || sumB === undefined) return 0;
                     if (sumA < sumB) return -1;
                     if (sumA > sumB) return 1;
-                    if(aWormholes < bWormholes) return -1;
-                    if(aWormholes > bWormholes) return 1;
                     return 0;
                 }
                 paths.sort(compareOccurences)
-                paths.sort(compareLengths)
+                paths.sort(compareWeights)
 
-                if(groupsToCheck.filter(group => group.some(node => node.classStartIndex !== -1)).length === 1) firstRun = false;
+                if(groupsToCheck.length <= 2) beforeLastMerge = false;
 
                 if (paths.length == 0) {
                     if (debug) console.log('No paths found')

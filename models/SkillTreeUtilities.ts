@@ -18,12 +18,15 @@ export class SkillTreeUtilities {
     exarchGroup = 0;
     notableException: string[];
     pause = false;
+    maxSteps: number;
 
 
     constructor(context: SkillTreeData, contextComapre: SkillTreeData | undefined) {
         this.skillTreeData = context;
         this.skillTreeDataCompare = contextComapre;
         this.skillTreeCodec = new SkillTreeCodec();
+        
+        this.maxSteps = 10;
 
         if (this.skillTreeData.patch.compare(versions.v3_24_0_atlas) == 0) {
             this.abyssGroup = 140;
@@ -63,9 +66,23 @@ export class SkillTreeUtilities {
             this.pause = !this.pause;
             this.allocateNodes(false);
         });
+
+        SkillTreeEvents.controls.on("increment-max-steps", this.incrementStep)
+        SkillTreeEvents.controls.on("decrement-max-steps", this.decrementStep)
+
         SkillTreeEvents.skill_tree.on("recalculate", this.allocateNodes);
         SkillTreeEvents.skill_tree.on("encode-url", this.encodeURL);
 
+    }
+
+    private incrementStep = () => {
+        this.maxSteps += 1;
+        this.allocateNodes(false);
+    }
+
+    private decrementStep = () => {
+        this.maxSteps -= 1;
+        this.allocateNodes(false);
     }
 
     private decodeImport = (str: string | undefined = undefined) => {
@@ -561,7 +578,7 @@ export class SkillTreeUtilities {
         if (!recalculated && this.pause) return;
 
         const preExecute = performance.now();
-        this.allocationAlgorithm.Execute(this.shortestPath);
+        this.allocationAlgorithm.Execute(this.shortestPath, this.maxSteps);
         const timeToExecute = performance.now() - preExecute;
         if(false && timeToExecute > 5) console.log('Execution time: ' + timeToExecute + ' ms')
         

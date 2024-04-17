@@ -35,6 +35,8 @@ export class SkillTreeEvents {
         | "search-change"
         | "import-change"
         | "pause-change"
+        | "increment-max-steps"
+        | "decrement-max-steps"
     >();
 
     public static skill_tree = new SkillTreeEventContainer<
