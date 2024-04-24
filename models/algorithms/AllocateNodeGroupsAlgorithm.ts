@@ -1,12 +1,7 @@
+import { SkillNode, SkillNodeStates } from "../SkillNode";
 import { SkillTreeData } from "../SkillTreeData";
 import { IAllocationAlgorithm } from "./IAllocationAlgorithm";
-import { SkillNode, SkillNodeStates } from "../SkillNode";
 import { ShortestPathToDesiredAlgorithm } from "./ShortestPathToDesiredAlgorithm";
-import { ShortestPathAlgorithm } from "./ShortestPathAlgorithm";
-import { versions } from "../versions/verions";
-import FibonacciHeap from "mnemonist/fibonacci-heap";
-import { beforeAll } from "bun:test";
-import { group } from "console";
 
 
 export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
@@ -26,11 +21,6 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             this.skillTreeData.removeState(node, SkillNodeStates.Active);
         }
 
-        // const startNodes = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Active))
-        //     .filter(node => node.classStartIndex !== undefined)[0]?.out
-        //     .filter(nodeId => this.skillTreeData.nodes[nodeId].isAscendancyStart === false)
-        //     .map(nodeId => this.skillTreeData.nodes[nodeId])
-        //     .filter(node => !node.is(SkillNodeStates.UnDesired));
         const desiredNodesUnsorted = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired))
 
         let nodeGroups: SkillNode[][] = [];
@@ -39,8 +29,6 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             this.skillTreeData.addState(node, SkillNodeStates.Active)
             nodeGroups.push([node])
         }
-
-
 
         let allAdjacentsMerged = false;
         while (!allAdjacentsMerged) {
@@ -92,17 +80,17 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
         for (const index in nodeGroups) {
             if (nodeGroups[index].some(node => node.classStartIndex !== undefined)) continue;
-            
-            for(const node of nodeGroups[index]){
+
+            for (const node of nodeGroups[index]) {
                 const earliestMandatoryNodeId = node.earliestMandatoryNode
 
-                if(earliestMandatoryNodeId === node.skill || (node.ascendancyName !== undefined && node.ascendancyName !== '')){
+                if (earliestMandatoryNodeId === node.skill || (node.ascendancyName !== undefined && node.ascendancyName !== '')) {
                     continue;
                 }
 
                 const earliestMandatoryNode = this.skillTreeData.nodes[earliestMandatoryNodeId];
 
-                if(!earliestMandatoryNode.is(SkillNodeStates.Active)){
+                if (!earliestMandatoryNode.is(SkillNodeStates.Active)) {
                     this.skillTreeData.addState(earliestMandatoryNode, SkillNodeStates.Active);
 
                     const adjacents = [...new Set([...earliestMandatoryNode.in, ...earliestMandatoryNode.out])]
@@ -150,32 +138,32 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
             const smallNodes = Object.values(this.skillTreeData.nodes).filter(node => node.isRegular2);
 
-            for(const node of smallNodes) {
+            for (const node of smallNodes) {
                 let isTravelNode = false;
-                for(const stat of node.stats){
-                    if(travelStats.includes(stat.toLowerCase())){
+                for (const stat of node.stats) {
+                    if (travelStats.includes(stat.toLowerCase())) {
                         isTravelNode = true;
                     }
                 }
 
-                if(isTravelNode) continue;
+                if (isTravelNode) continue;
 
                 const adjacent = [...new Set([...node.in, ...node.out])];
 
                 let adjacentTravelNode = false;
-                for(const id of adjacent) {
+                for (const id of adjacent) {
                     const adjNode = this.skillTreeData.nodes[id];
-                    for(const stat of adjNode.stats){
-                        if(travelStats.includes(stat.toLowerCase())){
+                    for (const stat of adjNode.stats) {
+                        if (travelStats.includes(stat.toLowerCase())) {
                             adjacentTravelNode = true;
                         }
 
-                        if(adjacentTravelNode) {
+                        if (adjacentTravelNode) {
                             desiredGroupDistances[node.id] = desiredGroupDistances[node.id] !== undefined ? desiredGroupDistances[node.id] - desiredAdjustment : 1 - desiredAdjustment;
                             break;
                         }
                     }
-                    if(adjacentTravelNode) {
+                    if (adjacentTravelNode) {
                         break;
                     }
                 }
@@ -186,12 +174,12 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             }
 
 
-            if(this.skillTreeData.nodes['65225'].is(SkillNodeStates.Desired)){
+            if (this.skillTreeData.nodes['65225'].is(SkillNodeStates.Desired)) {
                 for (const node of Object.values(this.skillTreeData.nodes).filter(node => node.isRegular2 && node.stats.some(stat => stat.toLowerCase() === '3% increased scarabs found in your maps'))) {
                     desiredGroupDistances[node.id] = 1.1;
                 }
             }
-            
+
         }
 
         if (nodeGroups.length > 1) {
@@ -204,20 +192,17 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                     break;
                 }
 
-                
-                if(count > maxSteps) {
-                    // console.log('Map', desiredGroupDistances['64048'] + desiredGroupDistances['57739'] + desiredGroupDistances['10884'])
-                    // console.log('Jun', desiredGroupDistances['44775'] + desiredGroupDistances['43934'])
-                    //return
+                //TODO: Make this automatically set when in a development environtment
+                //This allows a developer to step through the allocation algorithm, which eases debugging tremendously
+                const devEnv = false;
+                if (devEnv && count > maxSteps) {
+                    return
                 }
 
                 const paths: SkillNode[][] = [];
+                const nonMasteriesLeft = nodeGroups.some(group => group.every(node => !node.isMastery))
 
-                //const groupsToCheck = nodeGroups.length > 2 ? nodeGroups.filter(group => !group.some(node => node.classStartIndex !== undefined)) : nodeGroups;
-                const groupsToCheck = nodeGroups;
-                const nonMasteriesLeft = groupsToCheck.some(group => group.every(node => !node.isMastery))
-
-                for (const group of groupsToCheck) {
+                for (const group of nodeGroups) {
 
                     if ((nonMasteriesLeft && group.length === 1) && (group[0].isMastery && [...new Set([...group[0].in, ...group[0].out])].map(id => this.skillTreeData.nodes[id]).some(adjacent => adjacent.is(SkillNodeStates.Active) || adjacent.is(SkillNodeStates.Desired))))
                         continue;
@@ -260,12 +245,12 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                     let sumB = b.reduce((sum, currentNode) => sum += currentNode.is(SkillNodeStates.Desired) || currentNode.is(SkillNodeStates.Active) ? 0 : desiredGroupDistances[currentNode.GetId()] ? desiredGroupDistances[currentNode.GetId()] : 1, 0);
 
                     // If we're not merging the last two groups, shift an class starts to the end
-                    if(beforeLastMerge){
+                    if (beforeLastMerge) {
                         let aClassStart = a.some(node => node.classStartIndex !== undefined);
                         let bClassStart = b.some(node => node.classStartIndex !== undefined);
-                        if(aClassStart && bClassStart) return 0;
-                        if(aClassStart && !bClassStart) return 1;
-                        if(!aClassStart && bClassStart) return -1;
+                        if (aClassStart && bClassStart) return 0;
+                        if (aClassStart && !bClassStart) return 1;
+                        if (!aClassStart && bClassStart) return -1;
                     }
 
                     if (sumA === undefined || sumB === undefined) return 0;
@@ -276,7 +261,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
                 paths.sort(compareOccurences)
                 paths.sort(compareWeights)
 
-                if(groupsToCheck.length <= 2) beforeLastMerge = false;
+                if (nodeGroups.length <= 2) beforeLastMerge = false;
 
                 if (paths.length == 0) {
                     if (debug) console.log('No paths found')
@@ -314,9 +299,6 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
                 if (debug) console.log('Groups before merge ' + nodeGroups.length)
 
-                // const originGroup = nodeGroups.splice(nodeGroups.findIndex(group => group.includes(groupNode)))[0];
-                // const targetGroup = nodeGroups.splice(nodeGroups.findIndex(group => group.includes(lastNode)))[0];
-
                 const originGroup = nodeGroups.find((group => group.includes(groupNode)))
                 const targetGroup = nodeGroups.find((group => group.includes(lastNode)))
                 if (originGroup === undefined || targetGroup === undefined) {
@@ -336,18 +318,6 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             }
         }
 
-        // //Handle nodes connected through a mastery
-        // const shortestPathAlgo = new ShortestPathAlgorithm();
-        // const desiredMasteries = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired)).filter(node => node.isMastery)
-
-        // for(const mastery of desiredMasteries){
-        //     const adjacentDesireds = [...new Set([...mastery.in, ...mastery.out])].filter(id => this.skillTreeData.nodes[id].is(SkillNodeStates.Desired));
-        //     for(const adjacentId of adjacentDesireds){
-        //         const adjacentNode = this.skillTreeData.nodes[adjacentId]
-        //         const ophaned = [...new Set([...adjacentNode.in, ...adjacentNode.out])].some(id => !this.skillTreeData.nodes[id].is(SkillNodeStates.Desired) && this.skillTreeData.nodes[id].is(SkillNodeStates.Active));
-        //     }
-        // }
-
         //Cull extra nodes
         const requiredNodes: { [id: string]: SkillNode } = {};
 
@@ -360,10 +330,8 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             if (currentNode === undefined) break;
             explored[currentNode.GetId()] = currentNode
             requiredNodes[currentNode.GetId()] = currentNode
-            //console.log('Adding to required ' + currentNode.GetId()) 
 
             const adjacent = [...new Set([...currentNode.out, ...currentNode.in])]
-                //.filter(id => !explored[id])
                 .map(id => this.skillTreeData.nodes[id])
                 .filter(node => node.is(SkillNodeStates.Active))
 
@@ -391,14 +359,13 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             .filter(node => !requiredNodes[node.GetId()])
 
         for (const node of notRequiredNodes) {
-            //console.log('Checking ' + node.GetId())
             let frontier = [...startNodeIds]
             const explored2: { [id: string]: SkillNode } = {};
             while (frontier.length > 0) {
                 const currentNode = frontier.shift();
                 if (currentNode === undefined) break;
                 explored2[currentNode.GetId()] = currentNode
-                if(currentNode.isMastery) continue;
+                if (currentNode.isMastery) continue;
 
                 const adjacent = [...new Set([...currentNode.out, ...currentNode.in])]
                     .filter(id => !explored2[id])
@@ -415,20 +382,17 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
             let allDesiredFound = true;
             for (const desired of desiredNodesUnsorted) {
                 if (!explored2[desired.GetId()]) {
-                    //console.log("Didn't find " + desired.GetId() + " because of " + node.GetId())
                     allDesiredFound = false;
                     break;
                 }
             }
 
             if (!allDesiredFound) {
-                //console.log('Adding to required ' + node.GetId()) 
                 requiredNodes[node.GetId()] = node;
             } else {
                 const yeeted = node;
                 if (yeeted === undefined) break;
                 this.skillTreeData.removeState(yeeted, SkillNodeStates.Active)
-                //console.log('Yeeted ' + yeeted?.GetId())
             }
         }
 
@@ -473,7 +437,7 @@ export class AllocateNodeGroupsAlgorithm implements IAllocationAlgorithm {
 
             const centerX = totalX / nodeIds.length;
             const centerY = totalY / nodeIds.length;
-            const debug = false//node.skill === 17015
+            const debug = false
             for (const nodeId of nodeIds) {
                 const node = this.skillTreeData.nodes[nodeId]
                 if (node.name === 'Map Drop Duplication' || node.name === 'Adjacent Map Drop Chance') continue

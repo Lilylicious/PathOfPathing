@@ -6,7 +6,7 @@ import { FibonacciHeap } from 'mnemonist';
 
 export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
     Execute(treeData: SkillTreeData, nodeGroup: SkillNode[], nodeDistanceWeights: { [nodeId: string]: number }, wantDebug: boolean): SkillNode[][] {
-        wantDebug = false//nodeGroup[0].skill === 4259
+        wantDebug = false
         if(nodeGroup.length === 0) return new Array<Array<SkillNode>>();
 
         const nodesChecked: string[] = [];
@@ -99,6 +99,7 @@ export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
 
                     if (foundNode === frontierNode || distance[foundNode.GetId()] === undefined) {
                         //No path found, do what?
+                        //I don't actually remember what I want to do in this case so I'll just leave this here
                     }
 
                     pathDistances[foundNode.GetId()] = distance[foundNode.GetId()];
@@ -121,10 +122,6 @@ export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
                         }
                         if(!nodesChecked.includes(current.GetId())) nodesChecked.push(current.GetId());
 
-                        // if(nodesChecked.length === nodeGroup.length) {
-                        //     frontier.clear()
-                        //     if (wantDebug) console.log('Cleared frontier')                            
-                        // }
                         current = prev[current.GetId()];
                     }
                     
@@ -146,7 +143,6 @@ export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
                         return paths;
                     }
 
-                    //console.log('Distance', pathDistances[path[0].GetId()])
                     shortestPath = pathDistances[path[0].GetId()] + 1;
                     pathsFound.push(path.reverse());
                 }
@@ -155,7 +151,6 @@ export class ShortestPathToDesiredAlgorithm implements IPathAlgorithm  {
         const paths: SkillNode[][] = []
         let returnPath = pathsFound.pop();
         while(returnPath !== undefined) {
-            //console.log(returnPath[returnPath.length - 1].GetId(), returnPath[returnPath.length - 1].name, pathDistances)
             if (wantDebug) console.log('Path distances 2', pathDistances[returnPath[returnPath.length - 1].GetId()], shortestPath)
             if(pathDistances[returnPath[returnPath.length - 1].GetId()] <= shortestPath) {
                 paths.push(returnPath)

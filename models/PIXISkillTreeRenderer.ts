@@ -1,13 +1,13 @@
-import { SkillTreeData } from './SkillTreeData';
+import { Cull } from '@pixi-essentials/cull';
+import { Assets } from '@pixi/assets';
 import { Viewport } from 'pixi-viewport';
 import * as PIXI from 'pixi.js';
-import { Assets } from '@pixi/assets';
-import { utils } from "../app/utils";
-import { SkillTreeEvents } from "./SkillTreeEvents";
-import { SkillNodeStates, SkillNode, ConnectionStyle } from "./SkillNode";
-import { Cull } from '@pixi-essentials/cull';
-import { BaseSkillTreeRenderer, RenderLayer, IHighlight, ISpriteSheetAsset, IConnnection } from "./BaseSkillTreeRenderer";
 import { SemVer } from 'semver';
+import { utils } from "../app/utils";
+import { BaseSkillTreeRenderer, IConnnection, IHighlight, ISpriteSheetAsset, RenderLayer } from "./BaseSkillTreeRenderer";
+import { ConnectionStyle, SkillNode, SkillNodeStates } from "./SkillNode";
+import { SkillTreeData } from './SkillTreeData';
+import { SkillTreeEvents } from "./SkillTreeEvents";
 import { versions } from './versions/verions';
 
 export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
@@ -48,7 +48,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         super(container, skillTreeData, skillTreeDataCompare);
         this.NodeTooltips = {};
         this.NodeSpritesheets = {};
-        const version = skillTreeData.tree.slice(0,5) === 'Atlas' ? versions.v3_22_0_atlas : versions.v3_22_0;
+        const version = skillTreeData.tree.slice(0, 5) === 'Atlas' ? versions.v3_22_0_atlas : versions.v3_22_0;
 
         this.pixi = new PIXI.Application({
             width: window.innerWidth,
@@ -56,7 +56,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             resolution: devicePixelRatio,
             sharedTicker: true,
             backgroundColor: skillTreeData.patch.compare(version) >= 0 ? 0x070b10 : 0x1a1411,
-            powerPreference: "high-performance",            
+            powerPreference: "high-performance",
         });
         PIXI.Ticker.shared.stop();
         PIXI.Ticker.system.stop();
@@ -84,7 +84,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         this.viewport.name = 'viewport';
         this.viewport.drag().wheel({ percent: zoomPercent }).pinch({ percent: zoomPercent * 10 });
         this.viewport.clampZoom(defaultZoomLimits);
-        if(skillTreeData.tree.slice(0, 5) === 'Atlas') this.viewport.moveCenter(this.viewport.center.x * (zoomPercent / 2), this.viewport.center.y * (zoomPercent / 2) - 2000 )
+        if (skillTreeData.tree.slice(0, 5) === 'Atlas') this.viewport.moveCenter(this.viewport.center.x * (zoomPercent / 2), this.viewport.center.y * (zoomPercent / 2) - 2000)
         this.viewport.fitWorld(true);
         this.viewport.zoomPercent(1.726);
 
@@ -596,8 +596,8 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             graphic.name = `highlight-${highlight.node.id}`
             graphic.beginFill(0x000000, 0);
             graphic.lineStyle(5, highlight.color);
-            if(highlight.node.is(SkillNodeStates.Desired)) graphic.drawCircle(0, 0, Math.max(size.width, size.height) * .85);
-            else if(highlight.node.is(SkillNodeStates.UnDesired)) {
+            if (highlight.node.is(SkillNodeStates.Desired)) graphic.drawCircle(0, 0, Math.max(size.width, size.height) * .85);
+            else if (highlight.node.is(SkillNodeStates.UnDesired)) {
                 // graphic.endFill();
                 // graphic.beginFill(0x800020, 0.5);
                 //graphic.drawRoundedRect(-size.width * 0.72, -size.height * 0.72, size.width / 0.68, size.width / 0.68, 1)
@@ -605,9 +605,9 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
                 // graphic.beginFill(0x000000, 0);
                 graphic.lineStyle(7, highlight.color);
                 graphic.moveTo(-size.width * 0.7, -size.height * 0.7)
-                graphic.lineTo(size.width  * 0.7, size.height  * 0.7)
+                graphic.lineTo(size.width * 0.7, size.height * 0.7)
                 graphic.moveTo(-size.width * 0.7, size.height * 0.7)
-                graphic.lineTo(size.width  * 0.7, -size.height  * 0.7)
+                graphic.lineTo(size.width * 0.7, -size.height * 0.7)
             }
             else {
                 graphic.drawRoundedRect(-size.width * 0.72, -size.height * 0.72, size.width / 0.68, size.width / 0.68, 1)

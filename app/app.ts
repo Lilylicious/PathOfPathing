@@ -1,16 +1,15 @@
 import '../content/app.css';
 
+import { UIEvents } from 'models/events/UIEvents';
+import { SemVer } from 'semver';
+import { PIXISkillTreeRenderer } from '../models/PIXISkillTreeRenderer';
+import { SkillNode, SkillNodeStates } from '../models/SkillNode';
 import { SkillTreeData } from "../models/SkillTreeData";
 import { SkillTreeEvents } from "../models/SkillTreeEvents";
-import { ISkillTreeRenderer } from '../models/types/ISkillTreeRenderer';
-import { PIXISkillTreeRenderer } from '../models/PIXISkillTreeRenderer';
 import { SkillTreeUtilities } from '../models/SkillTreeUtilities';
-import { ConnectionStyle, SkillNode, SkillNodeStates } from '../models/SkillNode';
-import { utils } from './utils';
 import { SkillTreePreprocessors } from '../models/skill-tree/SkillTreePreprocessors';
-import { SemVer } from 'semver';
-import internal from 'stream';
-import { UIEvents } from 'models/events/UIEvents';
+import { ISkillTreeRenderer } from '../models/types/ISkillTreeRenderer';
+import { utils } from './utils';
 
 export class App {
     private skillTreeData!: SkillTreeData;
@@ -27,8 +26,14 @@ export class App {
 
             let options: ISkillTreeOptions | undefined = undefined;
             const semver = new SemVer(i);
-            var file = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree.json?123`).then(response => response.json());
+
+            //Changing this value will force local browser caches to re-fetch the file, unless they're ignoring query strings
+            //We also might need to force the cloudflare cache to clear
+            const cacheBuster = '123'
+            var file = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree.json?${cacheBuster}`).then(response => response.json());
             var json = file as ISkillTreeBase;
+
+            //// TODO: Separate this out. There's no good reason to comment in/out this when pregenerating data for a patch.
             //this.SetupPregeneration(file)
 
             const data = new SkillTreeData(SkillTreePreprocessors.Decode(json, options), semver);
@@ -94,19 +99,19 @@ export class App {
         const exportElement = document.getElementById("skillTreeControl_Export") as HTMLButtonElement;
         exportElement.addEventListener("click", () => {
             const passiveCode = this.skillTreeUtilities.encodeURL(true)
-            const prefix = 'https://www.pathofexile.com/fullscreen-' + (this.skillTreeData.tree.slice(0,5) === 'Atlas' ? 'atlas' : 'passive') + '-skill-tree/'
+            const prefix = 'https://www.pathofexile.com/fullscreen-' + (this.skillTreeData.tree.slice(0, 5) === 'Atlas' ? 'atlas' : 'passive') + '-skill-tree/'
             const url = prefix + passiveCode
             navigator.clipboard.writeText(url);
         });
 
         const poePlannerButton = document.getElementById("poePlanner_Button") as HTMLAnchorElement;
         poePlannerButton.addEventListener("click", () => {
-            const passiveCode = this.skillTreeUtilities.encodeURL(true)            
+            const passiveCode = this.skillTreeUtilities.encodeURL(true)
             const url = 'https://poeplanner.com/atlas-tree/' + passiveCode;
             window.open(url, '_blank')
         });
 
-        if(versionJson.versions[versionJson.versions.length - 1].slice(0, 4) !== version.slice(0, 4)) {
+        if (versionJson.versions[versionJson.versions.length - 1].slice(0, 4) !== version.slice(0, 4)) {
             poePlannerButton.style.setProperty('display', 'none')
         } else {
             poePlannerButton.style.setProperty('display', 'inline')
@@ -135,7 +140,7 @@ export class App {
                 showhideHelp.innerText = "Hide help";
             }
         });
-        
+
         const recalculate = document.getElementById('skillTreeControl_Recalculate') as HTMLInputElement;
         recalculate.addEventListener("click", () => {
             SkillTreeEvents.skill_tree.fire("recalculate", true);
@@ -153,27 +158,30 @@ export class App {
             SkillTreeEvents.controls.fire("pause-change");
         });
 
-       
+
         // Browser zoom messes things up, so disable that
         document.getElementById('skillTreeContainer')!.addEventListener('wheel', event => {
             if (event.ctrlKey) {
-              event.preventDefault()
+                event.preventDefault()
             }
-          }, true)
+        }, true)
 
-        document.addEventListener('keydown', function(event: KeyboardEvent) {
-            if ((event.ctrlKey || event.metaKey) && (event.key === '+' || event.key === '-'|| event.key==='=')) {
+        document.addEventListener('keydown', function (event: KeyboardEvent) {
+
+            // This also prevents browser zoom
+            if ((event.ctrlKey || event.metaKey) && (event.key === '+' || event.key === '-' || event.key === '=')) {
                 event.preventDefault();
             }
 
-            if(event.key === 'e'){
+            // This is for the dev environment, allowing you to step through the calculations with e and r
+            if (event.key === 'e') {
                 SkillTreeEvents.controls.fire('increment-max-steps');
-            } else if (event.key === 'r'){
+            } else if (event.key === 'r') {
                 SkillTreeEvents.controls.fire('decrement-max-steps');
             }
 
         });
-        
+
 
         const container = document.getElementById("skillTreeContainer");
         if (container !== null) {
@@ -191,52 +199,43 @@ export class App {
         }
     }
 
-    private SetupPregeneration = (file) => {
-        
+    // TODO: Handle typescript properly in pregeneration
+    private SetupPregeneration = (file: ISkillTreeBase) => {
+
         //Every node
         const sourceNodes = Object.values(file.nodes).map(node => node.skill);
-        let destinationNodes = []
         this.PreGenerateShortestDistances(file, sourceNodes);
     }
 
     private PreGenerateShortestDistances = (file, sourceNodes) => {
-        let verbose = false
-        
         const nodes = file.nodes
         console.log('Shortest distances started')
-        // for (const nodeId in nodes){
-        //     file.nodes[nodeId].earliestMandatoryNode = {}
-        // }
-        // console.log('Reset done')
 
         const travelStats = ['0.5% chance for map drops to be duplicated', '1% increased quantity of items found in your maps', '3% increased scarabs found in your maps', '2% increased effect of modifiers on your maps', '2% chance for one monster in each of your maps to drop an additional connected map', '+10 to strength', '+10 to intelligence', '+10 to dexterity']
 
         let count = 0
         console.log('Checking ' + sourceNodes.length + '')
-        for (const sourceId of sourceNodes){   
-            if (sourceId === "root"){
+        for (const sourceId of sourceNodes) {
+            if (sourceId === "root") {
                 console.log('Skipping root')
                 continue;
             }
 
-            if(sourceId === undefined || nodes[sourceId] === undefined){
+            if (sourceId === undefined || nodes[sourceId] === undefined) {
                 console.log('Skipping undefined node')
                 continue;
             }
-            
-            if (file.tree.slice(0,5) !== 'Atlas' && nodes[sourceId].ascendancyName !== undefined){
-                console.log('Skipping ascendancy node')
-                continue;
-            }      
 
-            if((nodes[sourceId].out === undefined && nodes[sourceId].in === undefined)
-            || (nodes[sourceId].out && nodes[sourceId].out.length === 0 && nodes[sourceId].in && nodes[sourceId].in.length === 0)){
-                console.log('Skipping no adjacent nodes')
+            if (file.tree.slice(0, 5) !== 'Atlas' && nodes[sourceId].ascendancyName !== undefined) {
+                console.log('Skipping ascendancy node')
                 continue;
             }
 
-            // if(count > 100)
-            //     break;
+            if ((nodes[sourceId].out === undefined && nodes[sourceId].in === undefined)
+                || (nodes[sourceId].out && nodes[sourceId].out.length === 0 && nodes[sourceId].in && nodes[sourceId].in.length === 0)) {
+                console.log('Skipping no adjacent nodes')
+                continue;
+            }
 
             const frontier = [nodes[sourceId]];
             const exitNodes: number[] = [];
@@ -250,18 +249,14 @@ export class App {
                 if (current === undefined) {
                     continue;
                 }
-                // if(sourceId === 65499 && current.skill === 5515){
-                //     console.log('verbose enabled')
-                //     verbose = true
-                // }
-                
+
                 console.log('Checking', sourceId + ': ' + current.skill)
                 const adjacent = [...new Set([...current.in, ...current.out])].filter(id =>
                     ![...exitNodes, ...visited].includes(Number(id))
                 );
-                if(!splitFound){
+                if (!splitFound) {
                     earliestMandatoryNode = current.skill;
-                    if(adjacent.length > 1) splitFound = true;
+                    if (adjacent.length > 1) splitFound = true;
                 }
 
                 for (const adjacentId of adjacent) {
@@ -287,7 +282,7 @@ export class App {
         console.log('Total frontier checks: ' + count);
 
         var a = document.createElement("a");
-        var newFile = new Blob([JSON.stringify(file, null, 4)], {type: 'text/plain'});
+        var newFile = new Blob([JSON.stringify(file, null, 4)], { type: 'text/plain' });
         a.href = URL.createObjectURL(newFile);
         a.download = 'updated.json';
         a.click();
@@ -315,7 +310,7 @@ export class App {
         this.populateStartClasses(document.getElementById("skillTreeControl_Class") as HTMLSelectElement);
         this.bindSearchBox(document.getElementById("skillTreeControl_Search") as HTMLInputElement);
         this.bindImportBox(document.getElementById("skillTreeControl_Import") as HTMLInputElement);
-        
+
         const controls = document.getElementsByClassName("skillTreeControls") as HTMLCollectionOf<HTMLDivElement>;
         for (const i in controls) {
             if (controls[i].style !== undefined) {
@@ -394,13 +389,13 @@ export class App {
                 const tierMapsMatch = stat.match('^(Tier 1-15.*have )([\\d\.]+)(%\\D*.*)$')
                 const matches = tierMapsMatch !== null ? tierMapsMatch : stat.match('^(\\D*)([\\d\.]+)(\\D*.*)$')
                 //0 is full string, then it's capture groups
-                if(matches !== null) {
+                if (matches !== null) {
                     const statName = matches[1] + matches[3];
                     const value = Number(matches[2]);
 
-                    if(statsSummed[statName] !== undefined){
+                    if (statsSummed[statName] !== undefined) {
                         let updatedStat = String((Number(statsSummed[statName][0]) + value).toFixed(2))
-                        if(updatedStat.endsWith('.00')) updatedStat = updatedStat.substring(0, updatedStat.length - 3)
+                        if (updatedStat.endsWith('.00')) updatedStat = updatedStat.substring(0, updatedStat.length - 3)
                         statsSummed[statName][0] = updatedStat;
                     } else {
                         statsSummed[statName] = [String(value), matches[1], matches[3]]
@@ -472,7 +467,7 @@ export class App {
                 const matches = tierMapsMatch !== null ? tierMapsMatch : stat.match('^(\\D*)([\\d\.]+)(\\D*.*)$')
                 const regexStatname = matches !== null ? matches[1] + matches[3] : undefined;
 
-                if(regexStatname !== undefined){
+                if (regexStatname !== undefined) {
                     groupStats[regexStatname] = statsSummed[regexStatname];
                 } else {
                     groupStats[stat] = statsSummed[stat];
@@ -499,12 +494,12 @@ export class App {
 
         group.appendChild(title);
 
-        for (const stat of Object.keys(stats).sort((a,b) => {
+        for (const stat of Object.keys(stats).sort((a, b) => {
             const aChance = a.toLowerCase().includes('chance to contain');
             const bChance = b.toLowerCase().includes('chance to contain');
 
-            if(aChance && !bChance) return -1;
-            if(!aChance && bChance) return 1;
+            if (aChance && !bChance) return -1;
+            if (!aChance && bChance) return 1;
             return 0;
         })) {
             const str = stats[stat][1] + stats[stat][0] + stats[stat][2];
@@ -587,7 +582,7 @@ export class App {
         if (this.skillTreeData.classes.length === 0) {
             return;
         }
-        
+
         const start = this.skillTreeData.getAscendancyClass();
         const ascClasses = this.skillTreeData.classes[this.skillTreeData.getStartClass()].ascendancies;
         if (ascClasses === undefined) {
@@ -755,9 +750,9 @@ export class App {
         if (window.location.search !== search) {
             window.location.search = search;
         }
-        
+
         const classControl = document.getElementById("skillTreeControl_Class") as HTMLSelectElement
-        if(version.slice(-5) === 'atlas' || version.slice(-8) === 'standard' ){
+        if (version.slice(-5) === 'atlas' || version.slice(-8) === 'standard') {
             classControl.style.visibility = 'hidden'
         } else {
             classControl.style.visibility = 'visible'

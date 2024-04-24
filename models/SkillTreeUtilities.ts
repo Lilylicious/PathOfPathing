@@ -1,9 +1,9 @@
-import { SkillTreeData } from "./SkillTreeData";
 import { SkillNode, SkillNodeStates } from "./SkillNode";
+import { SkillTreeData } from "./SkillTreeData";
 import { SkillTreeEvents } from "./SkillTreeEvents";
+import { AllocateNodeGroupsAlgorithm } from "./algorithms/AllocateNodeGroupsAlgorithm";
+import { ShortestPathToDesiredAlgorithm } from "./algorithms/ShortestPathToDesiredAlgorithm";
 import { SkillTreeCodec } from "./url-processing/SkillTreeCodec";
-import { ShortestPathToDesiredAlgorithm } from "./algorithms/ShortestPathToDesiredAlgorithm"
-import { AllocateNodeGroupsAlgorithm } from "./algorithms/AllocateNodeGroupsAlgorithm"
 import { versions } from "./versions/verions";
 
 export class SkillTreeUtilities {
@@ -25,7 +25,7 @@ export class SkillTreeUtilities {
         this.skillTreeData = context;
         this.skillTreeDataCompare = contextComapre;
         this.skillTreeCodec = new SkillTreeCodec();
-        
+
         this.maxSteps = 10;
 
         if (this.skillTreeData.patch.compare(versions.v3_24_0_atlas) == 0) {
@@ -44,9 +44,9 @@ export class SkillTreeUtilities {
             this.abyssGroup = 126;
             this.exarchGroup = 25;
         }
-        
+
         this.shortestPath = new ShortestPathToDesiredAlgorithm();
-        this.allocationAlgorithm = new AllocateNodeGroupsAlgorithm(this.skillTreeData, {abyssGroup: this.abyssGroup, exarchGroup: this.exarchGroup});
+        this.allocationAlgorithm = new AllocateNodeGroupsAlgorithm(this.skillTreeData, { abyssGroup: this.abyssGroup, exarchGroup: this.exarchGroup });
 
 
         this.notableException = ['3315', '1444', '44954', '49699', '23485']
@@ -173,7 +173,6 @@ export class SkillTreeUtilities {
             this.allocateNodes(false);
         }
         catch (ex) {
-            //window.location.hash = "";
             console.log(ex);
         }
     }
@@ -420,7 +419,6 @@ export class SkillTreeUtilities {
 
 
     private click = (node: SkillNode) => {
-        //this.skillTreeData.clearState(SkillNodeStates.Highlighted)
         if (node.is(SkillNodeStates.Compared)) {
             return;
         }
@@ -442,11 +440,13 @@ export class SkillTreeUtilities {
             return
         }
 
+        ////// Wandering path was removed in 3.24
         //// Wandering path isn't as obvious what nodes you want. I'd want some sort of user selection of desired stats in order to provide this automation.
         // if (this.skillTreeData.tree === "Atlas" && node.id === '40658' && !node.is(SkillNodeStates.Desired)){
         //    this.wanderingPathButtonClick()
         // }
 
+        // Seventh gate was removed in 3.24, but let's keep this around for a while
         if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.id === '41153') {
             this.seventhGateClick(false, node);
         }
@@ -471,7 +471,7 @@ export class SkillTreeUtilities {
                     groups.push(other.group)
                 }
             }
-            let addState: SkillNodeStates | undefined;                
+            let addState: SkillNodeStates | undefined;
             let removeState: SkillNodeStates | undefined;
 
             const nodeGroups = groups.map(groupId => this.skillTreeData.groups[groupId].nodes).map(nodeIds => nodeIds.map(nodeId => this.skillTreeData.nodes[nodeId]))
@@ -480,11 +480,11 @@ export class SkillTreeUtilities {
             const undesired = nodeGroups.map(group => group.filter(node => node.isNotable && node.is(SkillNodeStates.UnDesired))).flat().length
             const max = Math.max(clear, desired, undesired);
 
-            if(clear == max){
+            if (clear == max) {
                 addState = SkillNodeStates.Desired;
                 removeState = undefined;
 
-            } else if (desired == max){
+            } else if (desired == max) {
                 addState = SkillNodeStates.UnDesired;
                 removeState = SkillNodeStates.Desired;
             } else {
@@ -500,9 +500,9 @@ export class SkillTreeUtilities {
                 for (const nodeId of nodes) {
                     const node = this.skillTreeData.nodes[nodeId]
                     if (!node.isMastery && (node.isNotable || this.notableException.includes(nodeId))) {
-                        if(addState !== undefined)
+                        if (addState !== undefined)
                             this.skillTreeData.addState(node, addState);
-                        if(removeState !== undefined)
+                        if (removeState !== undefined)
                             this.skillTreeData.removeState(node, removeState);
                     }
                 }
@@ -528,7 +528,8 @@ export class SkillTreeUtilities {
     }
 
     private rightclick = (node: SkillNode) => {
-        //this.skillTreeData.clearState(SkillNodeStates.Highlighted)
+
+        // Seventh gate was removed in 3.24, but let's keep this around for a while
         if (this.skillTreeData.tree.slice(0, 5) === "Atlas" && node.id === '41153') {
             this.seventhGateClick(true, node);
         }
@@ -577,11 +578,14 @@ export class SkillTreeUtilities {
     public allocateNodes = (recalculated: boolean) => {
         if (!recalculated && this.pause) return;
 
+        //Change this to automatic devenv detection
+        const devEnv = false;
+
         const preExecute = performance.now();
         this.allocationAlgorithm.Execute(this.shortestPath, this.maxSteps);
         const timeToExecute = performance.now() - preExecute;
-        if(false && timeToExecute > 5) console.log('Execution time: ' + timeToExecute + ' ms')
-        
+        if (devEnv && timeToExecute > 5) console.log('Execution time: ' + timeToExecute + ' ms')
+
 
         this.skillTreeData.clearState(SkillNodeStates.Hovered);
         this.skillTreeData.clearState(SkillNodeStates.Pathing);
@@ -616,7 +620,6 @@ export class SkillTreeUtilities {
                 }
             }
         }
-        //console.log(this.adjustDesiredGroupDistances([node], 0.01))
 
         SkillTreeEvents.skill_tree.fire("hovered-nodes-start", node);
     }

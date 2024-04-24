@@ -36,7 +36,7 @@ export class UIEvents {
         if (!this.dragged) {
             UIEvents.clickSkillTree(point, this.skillTreeData);
         }
-        if(!this.dragTimeoutActive){
+        if (!this.dragTimeoutActive) {
             setTimeout(() => this.cancelDrag(), this.dragTimeout)
             this.dragTimeoutActive = true;
         }
@@ -46,7 +46,7 @@ export class UIEvents {
         if (!this.dragged) {
             UIEvents.rightClickSkillTree(point, this.skillTreeData);
         }
-        if(!this.dragTimeoutActive){
+        if (!this.dragTimeoutActive) {
             setTimeout(() => this.cancelDrag(), this.dragTimeout)
             this.dragTimeoutActive = true;
         }
