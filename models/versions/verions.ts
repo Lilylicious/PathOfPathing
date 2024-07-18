@@ -82,4 +82,5 @@ export class versions {
     public static v3_24_0_standard = new SemVer("3.24.0-standard");
     public static v3_24_0_atlas = new SemVer("3.24.0-atlas");
     public static v3_25_0_pre = new SemVer("3.25.0-pre");
+    public static v3_25_0_pre_atlas = new SemVer("3.25.0-pre-atlas");
 }
