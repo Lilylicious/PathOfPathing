@@ -29,7 +29,7 @@ export class App {
 
             //Changing this value will force local browser caches to re-fetch the file, unless they're ignoring query strings
             //We also might need to force the cloudflare cache to clear
-            const cacheBuster = '123'
+            const cacheBuster = '223'
             var file = await fetch(`${utils.SKILL_TREES_URI}/${i}/SkillTree.json?${cacheBuster}`).then(response => response.json());
             var json = file as ISkillTreeBase;
 
