@@ -268,3 +268,4 @@ paket-files/
 # /index.html
 # dist/*
 # !dist/data
+scripts/__pycache__/
