@@ -10,7 +10,7 @@ def main(tree_type, version):
         fetchAndPrepTree('skilltree', version)
     if tree_type == 'both':
         time.sleep(3)
-    if tree_type == 'atlas':
+    if tree_type == 'atlas' or tree_type == 'both':
         fetchAndPrepTree('atlas', version)
 
 
@@ -44,7 +44,7 @@ def fetchAndPrepTree(tree_type, version):
 
     json_tree = json.loads(json_text)
 
-    with open('../dist/data/skill-trees/' + version_number + 'SkillTree.json', 'w') as fd:
+    with open('../dist/data/skill-trees/' + version_number + '/SkillTree.json', 'w') as fd:
         fd.write(json.dumps(json_tree, indent=4))
 
     precalculate.main('../dist/data/skill-trees/' + version_number)
