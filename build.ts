@@ -1,6 +1,7 @@
 import path from 'path'
 import klaw from 'klaw'
 import { unlink } from 'node:fs/promises'
+import * as fs from 'node:fs'
 import { BuildOutput, BunFile } from 'bun'
 
 const find_scripts = (results: BuildOutput, end_marker: string): string => {
@@ -60,9 +61,9 @@ const copy = async (src: string, dst: string, callback: undefined | ((file: BunF
 
         await copy('./favicon.ico', `${output}/favicon.ico`)
         await copy('./app/index.html', `${output}/index.html`, async (file) => {
-            const text = await file.text()
-            return text.replace(marker, scripts)
-        })
+            const text = await fs.readFileSync('./app/index.html', 'utf-8');
+            return text.replace(marker, scripts);
+        });
         console.log('📁 static files copied');
     } catch (error) {
         console.error('❌ static files copy failed', error);
