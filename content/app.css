@@ -154,7 +154,7 @@ body {
 }
 
 .skillTreeNodes {
-    background-image: url('/data/skill-trees/PSPointsFrame.png');
+    background-image: url('../dist/data/skill-trees/PSPointsFrame.png');
     background-size: 120px 25px;
     margin-right: 0.5em;
     width: 120px;

@@ -32,9 +32,9 @@ def fetchAndPrepTree(tree_type):
         branch = g.get_repo("grindinggear/" + github_repo).get_branch("master")
         message = branch.commit.commit.message
 
-        match = re.search('^\d\.\d+\.\d', message)
+        match = re.search('^\\d\\.\\d+\\.\\d', message)
         version_number = base_version = (match and match.group(0) or 'unknown')
-
+        print('Found version', version_number)
     if version_number == 'unknown':
         print('No version number found')
         sys.exit()
