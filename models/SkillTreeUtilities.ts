@@ -4,7 +4,7 @@ import { SkillTreeEvents } from "./SkillTreeEvents";
 import { AllocateNodeGroupsAlgorithm } from "./algorithms/AllocateNodeGroupsAlgorithm";
 import { ShortestPathToDesiredAlgorithm } from "./algorithms/ShortestPathToDesiredAlgorithm";
 import { SkillTreeCodec } from "./url-processing/SkillTreeCodec";
-import { versions } from "./versions/verions";
+import { versions } from "./versions/versions";
 
 export class SkillTreeUtilities {
     skillTreeData: SkillTreeData;

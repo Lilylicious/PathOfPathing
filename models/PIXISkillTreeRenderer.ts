@@ -8,7 +8,7 @@ import { BaseSkillTreeRenderer, IConnnection, IHighlight, ISpriteSheetAsset, Ren
 import { ConnectionStyle, SkillNode, SkillNodeStates } from "./SkillNode";
 import { SkillTreeData } from './SkillTreeData';
 import { SkillTreeEvents } from "./SkillTreeEvents";
-import { versions } from './versions/verions';
+import { versions } from './versions/versions';
 
 export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
     private NodeTooltips: { [id: string]: PIXI.Container | undefined };

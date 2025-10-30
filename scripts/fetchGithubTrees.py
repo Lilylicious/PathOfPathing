@@ -64,13 +64,18 @@ def fetchAndPrepTree(tree_type):
     except OSError as e:
         pass
 
+    try:
+        os.remove(folder_path + version_number + "/ruthless-league.json")
+    except OSError as e:
+        pass
+
     print("Downloaded and created folders for version " + version_number)
 
     precalculate.main(folder_path + version_number)
 
     print("Generated distances")
 
-    with open('../models/versions/verions.ts', 'r') as f:
+    with open('../models/versions/versions.ts', 'r') as f:
         data = f.readlines()
     new_version_line = ('    public static v'
                         + version_number.replace('.', '_').replace('-', '_')
@@ -81,9 +86,43 @@ def fetchAndPrepTree(tree_type):
         print("Same line")
     else:
         data.insert(-1, new_version_line)
-        with open('../models/versions/verions.ts', 'w') as f:
+        with open('../models/versions/versions.ts', 'w') as f:
             contents = "".join(data)
             f.write(contents)
+
+    print("Checking for league json at " + folder_path + version_number + '/league.json')
+    if os.path.exists(folder_path + version_number + '/league.json'):
+        print("Found league json")
+        league_version_number = version_number + '-league'
+
+        if os.path.isdir(folder_path + league_version_number):
+            shutil.rmtree(folder_path + league_version_number)
+            print("Removed old files")
+
+        os.mkdir(folder_path + league_version_number)
+        shutil.copytree(folder_path + version_number + '/assets/', folder_path + league_version_number + '/assets', dirs_exist_ok=True)
+        os.rename(folder_path + version_number + '/league.json', folder_path + league_version_number + '/SkillTree.json', )
+
+        print("Copied files for version " + league_version_number)
+
+        precalculate.main(folder_path + league_version_number)
+
+        print("Generated distances")
+
+        with open('../models/versions/versions.ts', 'r') as f:
+            data_league = f.readlines()
+        new_version_line_league = ('    public static v'
+                            + league_version_number.replace('.', '_').replace('-', '_')
+                            + ' = new SemVer("'
+                            + league_version_number + '");\n')
+
+        if data_league[-2] == new_version_line_league or data_league[-3] == new_version_line_league:
+            print("Same line")
+        else:
+            data_league.insert(-1, new_version_line_league)
+            with open('../models/versions/versions.ts', 'w') as f:
+                contents = "".join(data_league)
+                f.write(contents)
 
 
 if __name__ == "__main__":

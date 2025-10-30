@@ -3,7 +3,7 @@
 
 import { SemVer } from "semver";
 import { App } from "./app";
-import { versions } from '../models/versions/verions';
+import { versions } from '../models/versions/versions';
 
 window.onload = async () => {
     const query = App.decodeURLParams(window.location.search);

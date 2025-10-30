@@ -1,7 +1,7 @@
 import { SkillNode, SkillNodeStates } from "./SkillNode";
 import { Constants } from "./Constants";
 import { SemVer } from "semver";
-import { versions } from "./versions/verions";
+import { versions } from "./versions/versions";
 import { ISkillTreeData } from "./types/ISkillTreeData";
 import { SpatialHash } from "./spatial-hash/SpatialHash";
 
