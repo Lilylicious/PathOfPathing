@@ -209,31 +209,31 @@ export class App {
 
     private PreGenerateShortestDistances = (file, sourceNodes) => {
         const nodes = file.nodes
-        console.log('Shortest distances started')
+        // console.log('Shortest distances started')
 
         const travelStats = ['0.5% chance for map drops to be duplicated', '1% increased quantity of items found in your maps', '3% increased scarabs found in your maps', '2% increased effect of modifiers on your maps', '2% chance for one monster in each of your maps to drop an additional connected map', '+10 to strength', '+10 to intelligence', '+10 to dexterity']
 
         let count = 0
-        console.log('Checking ' + sourceNodes.length + '')
+        // console.log('Checking ' + sourceNodes.length + '')
         for (const sourceId of sourceNodes) {
             if (sourceId === "root") {
-                console.log('Skipping root')
+                // console.log('Skipping root')
                 continue;
             }
 
             if (sourceId === undefined || nodes[sourceId] === undefined) {
-                console.log('Skipping undefined node')
+                // console.log('Skipping undefined node')
                 continue;
             }
 
             if (file.tree.slice(0, 5) !== 'Atlas' && nodes[sourceId].ascendancyName !== undefined) {
-                console.log('Skipping ascendancy node')
+                // console.log('Skipping ascendancy node')
                 continue;
             }
 
             if ((nodes[sourceId].out === undefined && nodes[sourceId].in === undefined)
                 || (nodes[sourceId].out && nodes[sourceId].out.length === 0 && nodes[sourceId].in && nodes[sourceId].in.length === 0)) {
-                console.log('Skipping no adjacent nodes')
+                // console.log('Skipping no adjacent nodes')
                 continue;
             }
 
@@ -250,7 +250,7 @@ export class App {
                     continue;
                 }
 
-                console.log('Checking', sourceId + ': ' + current.skill)
+                // console.log('Checking', sourceId + ': ' + current.skill)
                 const adjacent = [...new Set([...current.in, ...current.out])].filter(id =>
                     ![...exitNodes, ...visited].includes(Number(id))
                 );
@@ -263,11 +263,11 @@ export class App {
                     const adjacentNode: SkillNode = nodes[adjacentId];
                     if (adjacentNode.isRegular1 || adjacentNode.stats.some(stat => travelStats.includes(stat.toLowerCase()))) {
                         exitNodes.push(adjacentNode.skill);
-                        console.log('Exitnode')
+                        // console.log('Exitnode')
                     } else {
                         frontier.push(adjacentNode);
                         visited.push(adjacentNode.skill);
-                        console.log('Visited')
+                        // console.log('Visited')
                     }
                 }
 
@@ -279,7 +279,7 @@ export class App {
                 nodes[sourceId].earliestMandatoryNode = earliestMandatoryNode!;
             }
         }
-        console.log('Total frontier checks: ' + count);
+        // console.log('Total frontier checks: ' + count);
 
         var a = document.createElement("a");
         var newFile = new Blob([JSON.stringify(file, null, 4)], { type: 'text/plain' });

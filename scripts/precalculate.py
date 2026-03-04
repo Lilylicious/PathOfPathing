@@ -18,21 +18,21 @@ def main(path):
 
     nodes = data['nodes']
     node_ids = list(nodes.keys())
-    print("Checking " + str(len(node_ids)) + " nodes")
+    # print("Checking " + str(len(node_ids)) + " nodes")
     for node_id in node_ids:
-        print("Checking " + str(node_id))
+        # print("Checking " + str(node_id))
         if node_id == 'root':
-            print("Root node skipped")
+            # print("Root node skipped")
             continue
 
         node = nodes[node_id]
 
         if data['tree'][0:5] != 'Atlas' and 'ascendancyName' in node:
-            print('Skipping ascendancy node')
+            # print('Skipping ascendancy node')
             continue
 
         if 'in' not in node and 'out' not in node:
-            print("Skipping no adjacent nodes")
+            # print("Skipping no adjacent nodes")
             continue
 
         frontier = [node]
@@ -45,9 +45,9 @@ def main(path):
             adjacent = [x for x in frontier_node['in'] if x not in visited]
             adjacent.extend(x for x in frontier_node['out'] if x not in adjacent and x not in visited)
 
-            print('Checking ' + str(node_id)
-                  + ' against ' + str(frontier_node['skill'])
-                  + ' that has ' + str(len(adjacent)) + ' adjacencies')
+            # print('Checking ' + str(node_id)
+            #       + ' against ' + str(frontier_node['skill'])
+            #       + ' that has ' + str(len(adjacent)) + ' adjacencies')
 
             if not split_found:
                 earliest_mandatory_node = frontier_node['skill']
@@ -60,7 +60,7 @@ def main(path):
                 travel = any(stat in stats for stat in travel_stats)
                 if travel:
                     exit_nodes.append(adjacent_id)
-                    print("Found exitnode")
+                    # print("Found exitnode")
                 else:
                     frontier.append(adjacent_node)
                     visited.append(adjacent_id)
@@ -71,7 +71,7 @@ def main(path):
 
     with open(path, 'w') as f:
         f.write(json.dumps(data, indent=4))
-    print("Done")
+    # print("Done")
 
 
 if __name__ == "__main__":

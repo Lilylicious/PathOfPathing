@@ -23,7 +23,7 @@ def main(tree_type):
 
 
 def fetchAndPrepTree(tree_type):
-    folder_path = '../dist/data/skill-trees/'
+    folder_path = './dist/data/skill-trees/'
     if tree_type == 'atlas':
         github_repo = "atlastree-export"
     else:
@@ -75,18 +75,17 @@ def fetchAndPrepTree(tree_type):
 
     print("Generated distances")
 
-    with open('../models/versions/versions.ts', 'r') as f:
+    with open('./models/versions/versions.ts', 'r') as f:
         data = f.readlines()
     new_version_line = ('    public static v'
                         + version_number.replace('.', '_').replace('-', '_')
                         + ' = new SemVer("'
                         + version_number + '");\n')
-
-    if data[-2] == new_version_line or data[-3] == new_version_line:
-        print("Same line")
+    if new_version_line in data:
+        print("Version line already exists")
     else:
         data.insert(-1, new_version_line)
-        with open('../models/versions/versions.ts', 'w') as f:
+        with open('./models/versions/versions.ts', 'w') as f:
             contents = "".join(data)
             f.write(contents)
 
@@ -109,18 +108,18 @@ def fetchAndPrepTree(tree_type):
 
         print("Generated distances")
 
-        with open('../models/versions/versions.ts', 'r') as f:
+        with open('./models/versions/versions.ts', 'r') as f:
             data_league = f.readlines()
         new_version_line_league = ('    public static v'
                             + league_version_number.replace('.', '_').replace('-', '_')
                             + ' = new SemVer("'
                             + league_version_number + '");\n')
 
-        if data_league[-2] == new_version_line_league or data_league[-3] == new_version_line_league:
-            print("Same line")
+        if new_version_line_league in data:
+            print("Version line already exists")
         else:
             data_league.insert(-1, new_version_line_league)
-            with open('../models/versions/versions.ts', 'w') as f:
+            with open('./models/versions/versions.ts', 'w') as f:
                 contents = "".join(data_league)
                 f.write(contents)
 

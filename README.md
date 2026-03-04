@@ -15,11 +15,10 @@ The project is built on top of [EmmittJ's Skilltree Typescript](https://github.c
 * Expand on the ability for the tree to allocate groups of desired nodes. As an example, add a way to allocate life nodes within N nodes distance, or allocate all gateways when selecting seventh gate, or map drops when allocating wandering path perhaps.
 
 ## Update process when a new league launches
-1) From the scripts directory, run `fetchGithubTrees.py`
-2) From the root directory, run `bun run dev` to build the new version and start it in localhost
-3) Confirm everything looks right, then push to master. Done.
+1) From the root directory, run `bun run fetch`. This checks github for a new version number, fetches the trees, creates necessary folders, precalculates some distances, then starts a local http server to run the site locally.
+2) Confirm everything looks right, then push to master. Done.
 
-I run this in WSL. If I was maintaining this properly I'd change this so the python script can be run from the same directory as building/running it, and combining the python script with building, but this is in full minimum-effort maintenance mode at the moment.
+I run this in WSL with python3.9, which works. Later python versions seem to break some stuff for some reason that I can't be bothered to figure out.
 
 As long as no major changes are made, this should work fine. It handles the primary player skill tree, the primary atlas tree, and any league atlas tree if one exists. It does this by looking for the version number in the format currently in use (e.g. 3.27), and the filenames currently in use. If any of these change, then it will not longer automatically work to grab them. 
 
