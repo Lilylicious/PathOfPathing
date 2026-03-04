@@ -166,6 +166,11 @@ export class App {
             }
         }, true)
 
+        // don't propagate scroll event inside stats menu to not zoom in tree at the same time
+        document.getElementById('skillTreeStats')!.addEventListener('wheel', event => {
+            event.stopPropagation();
+        }, true)
+
         document.addEventListener('keydown', function (event: KeyboardEvent) {
 
             // This also prevents browser zoom
