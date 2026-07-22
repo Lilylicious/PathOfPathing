@@ -93,4 +93,6 @@ export class versions {
     public static v3_28_0 = new SemVer("3.28.0");
     public static v3_28_0_atlas = new SemVer("3.28.0-atlas");
     public static v3_28_0_atlas_league = new SemVer("3.28.0-atlas-league");
+    public static v3_29_0 = new SemVer("3.29.0");
+    public static v3_29_0_atlas = new SemVer("3.29.0-atlas");
 }
