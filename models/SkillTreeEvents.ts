@@ -70,5 +70,6 @@ export class SkillTreeEvents {
         | "move"
         | "up"
         | "rightup"
+        | "zoom"
     >();
 }

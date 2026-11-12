@@ -1,10 +1,10 @@
-import { Cull } from '@pixi-essentials/cull';
 import { Assets } from '@pixi/assets';
 import { Viewport } from 'pixi-viewport';
 import * as PIXI from 'pixi.js';
 import { SemVer } from 'semver';
 import { utils } from "../app/utils";
 import { BaseSkillTreeRenderer, IConnnection, IHighlight, ISpriteSheetAsset, RenderLayer } from "./BaseSkillTreeRenderer";
+import { RenderProfiler } from "./RenderProfiler";
 import { ConnectionStyle, SkillNode, SkillNodeStates } from "./SkillNode";
 import { SkillTreeData } from './SkillTreeData';
 import { SkillTreeEvents } from "./SkillTreeEvents";
@@ -13,10 +13,12 @@ import { versions } from './versions/versions';
 export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
     private NodeTooltips: { [id: string]: PIXI.Container | undefined };
     private NodeSpritesheets: { [id: string]: PIXI.Spritesheet[] | undefined };
+    private arcTextures = new WeakMap<PIXI.Texture, Map<string, PIXI.Texture>>();
     private _dirty = true;
     private pixi: PIXI.Application<HTMLCanvasElement>;
     private viewport: Viewport;
-    private cull: Cull;
+    private readonly worldBounds = new WeakMap<PIXI.DisplayObject, PIXI.Rectangle>();
+    private profiler?: RenderProfiler;
     private DO_NOT_CULL = [RenderLayer.Tooltip, RenderLayer.TooltipCompare];
     LayerContainers: { [layer in RenderLayer]: PIXI.Container } = {
         [RenderLayer.Background]: new PIXI.Container(),
@@ -54,6 +56,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             width: window.innerWidth,
             height: window.innerHeight,
             resolution: devicePixelRatio,
+            autoDensity: true,
             sharedTicker: true,
             backgroundColor: skillTreeData.patch.compare(version) >= 0 ? 0x070b10 : 0x1a1411,
             powerPreference: "high-performance",
@@ -72,8 +75,8 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         const zoomPercent = this.skillTreeData.imageZoomLevels.length > 2 ? this.skillTreeData.imageZoomLevels[1] - this.skillTreeData.imageZoomLevels[0] : .1;
         const defaultZoomLimits = { minWidth: this.skillTreeData.width * (zoomPercent / 2), minHeight: this.skillTreeData.height * (zoomPercent / 2), maxWidth: this.skillTreeData.width * (zoomPercent * 30), maxHeight: this.skillTreeData.height * (zoomPercent * 30) };
         this.viewport = new Viewport({
-            screenWidth: this.pixi.renderer.width,
-            screenHeight: this.pixi.renderer.height,
+            screenWidth: this.pixi.renderer.screen.width,
+            screenHeight: this.pixi.renderer.screen.height,
             worldWidth: this.skillTreeData.width * (this.skillTreeData.scale * 1.25),
             worldHeight: this.skillTreeData.height * (this.skillTreeData.scale * 1.25),
             events: this.pixi.renderer.events,
@@ -93,17 +96,42 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         this.viewport.on('pointerup', (event) => SkillTreeEvents.viewport.fire("up", this.viewport.toWorld(event.global)));
         this.viewport.on('rightup', (event) => SkillTreeEvents.viewport.fire("rightup", this.viewport.toWorld(event.global)));
         this.viewport.on('pointercancel', () => SkillTreeEvents.viewport.fire("cancel"));
+        this.viewport.on('zoomed', () => SkillTreeEvents.viewport.fire("zoom"));
 
         this.pixi.stage.addChild(this.viewport);
 
         window.onresize = () => {
             this.pixi.renderer.resize(window.innerWidth, window.innerHeight);
-            this.viewport.resize(this.pixi.renderer.width, this.pixi.renderer.height, this.skillTreeData.width * (this.skillTreeData.scale * 1.25), this.skillTreeData.height * (this.skillTreeData.scale * 1.25));
+            this.viewport.resize(this.pixi.renderer.screen.width, this.pixi.renderer.screen.height, this.skillTreeData.width * (this.skillTreeData.scale * 1.25), this.skillTreeData.height * (this.skillTreeData.scale * 1.25));
             this.viewport.clampZoom(defaultZoomLimits);
+            SkillTreeEvents.viewport.fire("zoom");
         };
 
-        this.cull = new Cull();
-        super.Tick();
+        requestAnimationFrame(this.Tick);
+    }
+
+    private BeginProfilePan(view: "wide" | "close") {
+        const { position, scale } = this.viewport;
+        const originalPosition = position.clone();
+        const originalScale = scale.clone();
+        const { width, height } = this.pixi.renderer.screen;
+        const tree = this.skillTreeData;
+        const zoom = Math.min(width / (tree.width * tree.scale), height / (tree.height * tree.scale))
+            * (view === "wide" ? 1 : 2.5);
+        const x = width / 2 - (tree.min_x + tree.max_x) / 2 * tree.scale * zoom;
+        const y = height / 2 - (tree.min_y + tree.max_y) / 2 * tree.scale * zoom;
+        scale.set(zoom);
+        return {
+            move: (dx: number, dy: number) => {
+                position.set(x + dx, y + dy);
+                this.viewport.dirty = true;
+            },
+            restore: () => {
+                scale.copyFrom(originalScale);
+                position.copyFrom(originalPosition);
+                this.viewport.dirty = true;
+            },
+        };
     }
 
     IsDirty(): boolean {
@@ -111,29 +139,59 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
     }
 
     PreUpdate(delta: number): void {
+        this.profiler?.frame(delta);
         this.viewport.update(delta);
     }
 
     Update(_: number): void {
-        this.cull.cull(this.pixi.renderer.screen);
-        this.pixi.render();
+        if (this.profiler?.active) {
+            this.profiler.draw(
+                () => this.CullScene(),
+                () => this.pixi.render(),
+            );
+        } else {
+            this.CullScene();
+            this.pixi.render();
+        }
         this._dirty = this.viewport.dirty = false;
     }
 
     PostUpdate(_: number): void { }
+
+    private CullScene(): void {
+        const view = this.viewport.getVisibleBounds();
+        const { x, y, scale } = this.viewport;
+        for (const key in this.LayerContainers) {
+            const layer = Number(key) as RenderLayer;
+            const container = this.LayerContainers[layer];
+            if (container.parent !== this.viewport || this.DO_NOT_CULL.includes(layer)) {
+                continue;
+            }
+
+            for (const object of container.children) {
+                // Pixi draws masks through its stencil system as needed.
+                if (!object.renderable) {
+                    continue;
+                }
+                let bounds = this.worldBounds.get(object);
+                if (bounds === undefined) {
+                    const screen = object.getBounds();
+                    // Layer children stay in place for their lifetime. Cache bounds without the camera transform.
+                    bounds = new PIXI.Rectangle((screen.x - x) / scale.x, (screen.y - y) / scale.y,
+                        screen.width / scale.x, screen.height / scale.y);
+                    this.worldBounds.set(object, bounds);
+                }
+                object.visible = bounds.intersects(view);
+            }
+        }
+    }
 
     protected SetupLayers() {
         this.viewport.removeChildren();
 
         for (const key in this.LayerContainers) {
             const layer = Number(key) as RenderLayer;
-            const object = this.LayerContainers[layer];
-
-            if (this.DO_NOT_CULL.indexOf(layer) === -1) {
-                this.cull.add(object);
-            }
-
-            this.viewport.addChild(object);
+            this.viewport.addChild(this.LayerContainers[layer]);
         }
     }
 
@@ -143,14 +201,6 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         this.LayerContainers[layer] = object;
 
         const current = this.viewport.getChildAt(layer) as PIXI.Container;
-        if (this.DO_NOT_CULL.indexOf(layer) === -1) {
-            this.cull.remove(current);
-        }
-
-        if (this.DO_NOT_CULL.indexOf(layer) === -1) {
-            this.cull.add(object);
-        }
-
         if (object === current) {
             return;
         }
@@ -174,8 +224,24 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         }
 
         await this.LoadAssets([this.skillTreeData, this.skillTreeDataCompare]);
+        await this.InitializeSpriteSheets();
 
-        return this.InitializeSpriteSheets();
+        if (this.pixi.renderer instanceof PIXI.Renderer && new URLSearchParams(window.location.search).get("profile") === "1") {
+            this.profiler = new RenderProfiler(this.pixi.renderer.gl, {
+                describe: () => ({
+                    tree: this.skillTreeData.patch.version,
+                    zoom: this.viewport.scale.x,
+                    width: this.pixi.view.width,
+                    height: this.pixi.view.height,
+                    cssWidth: this.pixi.view.clientWidth,
+                    cssHeight: this.pixi.view.clientHeight,
+                    resolution: this.pixi.renderer.resolution,
+                }),
+                beginPan: (view) => this.BeginProfilePan(view),
+            });
+        }
+
+        return true;
     }
 
     private LoadAssets = (data: (SkillTreeData | undefined)[]): Promise<boolean> => {
@@ -232,7 +298,7 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
                 const text = new PIXI.Text(progressText, { fontSize: 250, fill: 0xFFFFFF });
                 text.position.set(0, -50);
                 this.viewport.addChild(text);
-                this.Tick();
+                this._dirty = true;
             }
         }).then(_ => true);
     }
@@ -443,23 +509,11 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             container.addChild(backgroundSprite);
         } else {
             texture.baseTexture.wrapMode = PIXI.WRAP_MODES.REPEAT;
-            const columns = 10;
-            const rows = 10;
             const width = this.skillTreeData.width * (this.skillTreeData.scale * 1.25);
             const height = this.skillTreeData.height * (this.skillTreeData.scale * 1.25);
-            const cellWidth = width / columns;
-            const cellHeight = height / rows;
-            for (let row = 0; row < rows; row++) {
-                for (let column = 0; column < columns; column++) {
-                    const x = cellWidth * column - width / 2;
-                    const y = cellHeight * row - height / 2;
-                    let backgroundSprite: PIXI.Sprite = PIXI.Sprite.from(texture);
-                    backgroundSprite.name = `${asset.icon}-r:${row}-c:${column}`;
-                    backgroundSprite = PIXI.TilingSprite.from(texture.baseTexture, { width: cellWidth, height: cellHeight });
-                    backgroundSprite.position.set(x, y);
-                    container.addChild(backgroundSprite);
-                }
-            }
+            const background = PIXI.TilingSprite.from(texture.baseTexture, { width, height });
+            background.position.set(-width / 2, -height / 2);
+            container.addChild(background);
         }
         this.SetLayer(layer, container);
     }
@@ -467,15 +521,13 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
     protected DrawConnections = (layer: RenderLayer, connections: IConnnection[]): void => {
         const container = this.GetLayer(layer);
 
-        const connectionContainer = new PIXI.Container();
         for (const connection of connections) {
             const drawn = this.DrawConnection(connection)
             if (drawn) {
-                connectionContainer.addChild(drawn);
+                container.addChild(drawn);
             }
         }
 
-        container.addChild(connectionContainer);
         this.SetLayer(layer, container);
     }
 
@@ -512,20 +564,39 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         startAngle -= Math.PI / 2;
         endAngle -= Math.PI / 2;
 
-        let angle = endAngle - startAngle;
-        const arcsNeeded = Math.ceil(angle / (Math.PI / 2));
-        const initialRotation = Math.PI / 2 + startAngle;
+        const span = endAngle - startAngle;
+        if (span <= 0) {
+            return null;
+        }
 
+        const radius = node.orbitRadii[node.orbit] * node.scale;
+        const lineWidth = 50 * node.scale;
+        const x = node.nodeGroup.x * node.scale;
+        const y = node.nodeGroup.y * node.scale;
+        const rotation = endAngle + Math.PI / 2;
+        const arcTexture = this.GetArcTexture(texture, radius, lineWidth, span);
+        if (arcTexture !== null) {
+            const sprite = new PIXI.Sprite(arcTexture);
+            sprite.position.set(x, y);
+            sprite.rotation = rotation;
+            if (connection.removing) {
+                sprite.tint = 0xFF0000;
+            }
+            return sprite;
+        }
+
+        // Keep the original mask for textures without a drawable image source.
         const arcContainer = new PIXI.Container();
         const mask = new PIXI.Graphics();
-        mask.lineStyle(50 * node.scale, 0xFFC0CB);
-        mask.arc(node.nodeGroup.x * node.scale, node.nodeGroup.y * node.scale, node.orbitRadii[node.orbit] * node.scale, startAngle, endAngle, false);
+        mask.lineStyle(lineWidth, 0xFFC0CB);
+        mask.arc(x, y, radius, startAngle, endAngle, false);
         arcContainer.addChild(mask);
 
+        const arcsNeeded = Math.ceil(span / (Math.PI / 2));
         for (let i = 0; i < arcsNeeded; ++i) {
             const sprite = PIXI.Sprite.from(texture);
-            sprite.rotation = angle + initialRotation;
-            sprite.position.set(node.nodeGroup.x * node.scale, node.nodeGroup.y * node.scale);
+            sprite.rotation = rotation - i * Math.PI / 2;
+            sprite.position.set(x, y);
             sprite.anchor.set(1);
 
             if (connection.removing) {
@@ -534,14 +605,70 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
 
             sprite.mask = mask;
             arcContainer.addChild(sprite);
-
-            if (angle < Math.PI / 2) {
-                continue
-            }
-            angle -= Math.PI / 2
         }
 
         return arcContainer;
+    }
+
+    private GetArcTexture(texture: PIXI.Texture, radius: number, lineWidth: number, span: number): PIXI.Texture | null {
+        const { resolution, resource } = texture.baseTexture;
+        if (!(resource instanceof PIXI.BaseImageResource)) {
+            return null;
+        }
+
+        let shapes = this.arcTextures.get(texture);
+        if (shapes === undefined) {
+            shapes = new Map();
+            this.arcTextures.set(texture, shapes);
+        }
+        // Identical spans can differ by floating-point rounding after subtracting their angles.
+        const key = `${radius}/${lineWidth}/${span.toFixed(8)}`;
+        const cached = shapes.get(key);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        // Bake the stencil once per shape so all copies render as ordinary batched sprites.
+        const { x, y, width, height } = texture.frame;
+        const source = resource.source as CanvasImageSource;
+        const quarterTurn = Math.PI / 2;
+        const segments = Math.ceil(span / quarterTurn);
+        const outerRadius = radius + lineWidth / 2;
+        const innerRadius = Math.max(0, radius - lineWidth / 2);
+        // Limit the canvas to the arc's visible bounds, with a pixel for antialiasing.
+        const left = Math.max(-(segments === 1 ? width : Math.max(width, height)) * resolution,
+            Math.floor(-outerRadius * Math.sin(Math.min(span, quarterTurn)) * resolution) - 1);
+        const top = Math.max(-height * resolution, Math.floor(-outerRadius * resolution) - 1);
+        const bottomRadius = segments === 1 ? innerRadius : outerRadius;
+        const bottom = Math.min((segments === 1 ? 0 : width) * resolution,
+            Math.ceil(-bottomRadius * Math.cos(span) * resolution) + 1);
+        const canvas = document.createElement('canvas');
+        canvas.width = -left;
+        canvas.height = Math.max(1, bottom - top);
+        const context = canvas.getContext('2d');
+        if (context === null) {
+            return null;
+        }
+
+        context.scale(resolution, resolution);
+        context.translate(-left / resolution, -top / resolution);
+        context.save();
+        for (let i = 0; i < segments; ++i) {
+            context.drawImage(source, x * resolution, y * resolution, width * resolution, height * resolution, -width, -height, width, height);
+            context.rotate(-quarterTurn);
+        }
+        context.restore();
+        context.globalCompositeOperation = 'destination-in';
+        context.lineWidth = lineWidth;
+        context.beginPath();
+        context.arc(0, 0, radius, -quarterTurn - span, -quarterTurn);
+        context.stroke();
+
+        const baseTexture = new PIXI.BaseTexture(canvas, { resolution });
+        const baked = new PIXI.Texture(baseTexture);
+        baked.defaultAnchor.set(-left / canvas.width, -top / canvas.height);
+        shapes.set(key, baked);
+        return baked;
     }
 
     private DrawLineConnection = (connection: IConnnection): PIXI.Container | null => {
@@ -703,18 +830,19 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
         }
 
         if (tooltip !== undefined && hovered !== undefined) {
-            const bounds = tooltip.getBounds();
+            const { width, height } = this.pixi.renderer.screen;
             const size = hovered.targetSize;
-            const scaleX = tooltip.width / bounds.width / devicePixelRatio;
-            const scaleY = tooltip.height / bounds.height / devicePixelRatio;
+            const scaleX = 1 / this.viewport.scale.x;
+            const scaleY = 1 / this.viewport.scale.y;
+            const right = this.viewport.toScreen(hovered.x + size.width, hovered.y - size.height / 2);
 
-            if (tooltip.worldTransform.tx + bounds.width > screen.width) {
+            if (right.x + tooltip.width > width) {
                 tooltip.x = hovered.x - tooltip.width * scaleX - size.width;
             } else {
                 tooltip.x = hovered.x + size.width;
             }
 
-            if (tooltip.worldTransform.ty + bounds.height > screen.height) {
+            if (right.y + tooltip.height > height) {
                 tooltip.y = hovered.y - tooltip.height * scaleY + size.height / 2;
             } else {
                 tooltip.y = hovered.y - size.height / 2;
@@ -723,12 +851,10 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             tooltip.scale.set(scaleX, scaleY);
 
             if (tooltipCompare !== undefined && hoveredCompareNode !== undefined) {
-                const boundsCompare = tooltipCompare.getBounds();
-
                 tooltipCompare.y = tooltip.y;
                 tooltipCompare.x = tooltip.x + tooltip.width;
 
-                tooltipCompare.scale.set(tooltipCompare.width / boundsCompare.width / devicePixelRatio, tooltipCompare.height / boundsCompare.height / devicePixelRatio);
+                tooltipCompare.scale.set(scaleX, scaleY);
             }
         }
 
