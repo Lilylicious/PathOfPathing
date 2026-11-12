@@ -495,8 +495,8 @@ export class SkillTreeUtilities {
             for (const groupId of groups) {
                 let nodes = [...this.skillTreeData.groups[groupId].nodes]
                 if (nodes.includes('65499')) nodes.push('54499', '55003')
-                if (nodes.includes('19599')) nodes.push('9338', '50203', '5515')
-                if (nodes.includes('37316')) nodes.push('9409', '45606')
+                // if (nodes.includes('19599')) nodes.push('9338', '50203', '5515')
+                // if (nodes.includes('37316')) nodes.push('9409', '45606')
 
                 for (const nodeId of nodes) {
                     const node = this.skillTreeData.nodes[nodeId]
@@ -557,7 +557,7 @@ export class SkillTreeUtilities {
             for (const groupId of groups) {
                 let nodes = [...this.skillTreeData.groups[groupId].nodes]
                 if (nodes.includes('65499')) nodes.push('54499', '55003')
-                if (nodes.includes('19599')) nodes.push('9338', '50203', '5515')
+                // if (nodes.includes('19599')) nodes.push('9338', '50203', '5515')
 
                 for (const nodeId of nodes) {
                     const node = this.skillTreeData.nodes[nodeId]
