@@ -435,7 +435,19 @@ export class PIXISkillTreeRenderer extends BaseSkillTreeRenderer {
             return;
         }
 
-        if (asset.icon === "AtlasPassiveBackground") {
+        if (asset.icon === "AtlasPassiveBackground" && this.skillTreeData.patch.compare(versions.v3_30_0_atlas) >= 0) {
+            //3.30 centers the artwork on the start node at 1:1 scale (see GGG's atlastree-export)
+            const backgroundSprite = PIXI.Sprite.from(texture);
+            backgroundSprite.name = asset.icon;
+            backgroundSprite.anchor.set(.5);
+            const startId = this.skillTreeData.root.out[0];
+            const start = startId !== undefined ? this.skillTreeData.nodes[startId] : undefined;
+            if (start !== undefined) {
+                backgroundSprite.position.set(start.x, start.y);
+            }
+            container.addChild(backgroundSprite);
+        } else if (asset.icon === "AtlasPassiveBackground") {
+            //earlier atlases stretch the artwork over the whole tree
             let backgroundSprite: PIXI.Sprite = PIXI.Sprite.from(texture);
             backgroundSprite.name = asset.icon;
             backgroundSprite.scale.set(2.8173)
