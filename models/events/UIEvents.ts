@@ -8,7 +8,8 @@ export class UIEvents {
     private dragTimeout = 50;
     private start: IPoint = { x: 0, y: 0 };
     private dragged: boolean = false;
-    private hovered: SkillNode[] = [];
+    private hovered: SkillNode | null = null;
+    private hoverNeedsRefresh = false;
 
     skillTreeData: SkillTreeData;
     skillTreeDataCompare: SkillTreeData | undefined;
@@ -22,14 +23,13 @@ export class UIEvents {
         SkillTreeEvents.viewport.on("move", this.move);
         SkillTreeEvents.viewport.on("down", this.down);
         SkillTreeEvents.viewport.on("cancel", () => setTimeout(() => this.cancelDrag(), this.dragTimeout));
+        SkillTreeEvents.viewport.on("zoom", this.invalidateHover);
+        SkillTreeEvents.skill_tree.on("highlighted-nodes-update", this.invalidateHover);
+        SkillTreeEvents.skill_tree.on("active-nodes-update", this.invalidateHover);
     }
 
-    private skillTrees = (): SkillTreeData[] => {
-        const result = [this.skillTreeData]
-        if (this.skillTreeDataCompare !== undefined) {
-            result.push(this.skillTreeDataCompare);
-        }
-        return result;
+    private invalidateHover = () => {
+        this.hoverNeedsRefresh = true;
     }
 
     private up = (point: IPoint) => {
@@ -86,23 +86,21 @@ export class UIEvents {
             this.dragged = this.dragged || (diff.x * diff.x + diff.y * diff.y) > this.DRAG_THRESHOLD_SQUARED;
         }
 
-        const current = new Array<SkillNode>();
-        for (const skillTree of this.skillTrees()) {
-            const node = skillTree.getNodeAtPoint(globalPoint);
-            if (node !== null) {
-                current.push(node);
-                break;
-            }
+        const current = this.skillTreeData.getNodeAtPoint(globalPoint)
+            ?? this.skillTreeDataCompare?.getNodeAtPoint(globalPoint)
+            ?? null;
+        if (current === this.hovered && !this.hoverNeedsRefresh) {
+            return;
         }
 
-        const diff = this.hovered.filter(x => !current.includes(x));
-        for (const node of diff) {
-            SkillTreeEvents.node.fire("out", node);
+        if (this.hovered !== null && this.hovered !== current) {
+            SkillTreeEvents.node.fire("out", this.hovered);
         }
 
         this.hovered = current;
-        for (const node of this.hovered) {
-            SkillTreeEvents.node.fire("in", node);
+        this.hoverNeedsRefresh = false;
+        if (current !== null) {
+            SkillTreeEvents.node.fire("in", current);
         }
     }
 }

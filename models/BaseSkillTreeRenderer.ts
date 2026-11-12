@@ -10,7 +10,7 @@ export abstract class BaseSkillTreeRenderer implements ISkillTreeRenderer {
     protected skillTreeData: SkillTreeData;
     protected skillTreeDataCompare: SkillTreeData | undefined;
 
-    private _lastTick = Date.now();
+    private _lastTick: number | undefined;
 
     constructor(container: HTMLElement, skillTreeData: SkillTreeData, skillTreeDataCompare: SkillTreeData | undefined) {
         this.container = container;
@@ -22,9 +22,8 @@ export abstract class BaseSkillTreeRenderer implements ISkillTreeRenderer {
     abstract PreUpdate(delta: number): void;
     abstract Update(delta: number): void;
     abstract PostUpdate(delta: number): void;
-    protected Tick() {
-        const tick = Date.now();;
-        const delta = this._lastTick - tick;
+    protected Tick = (tick: number) => {
+        const delta = this._lastTick === undefined ? 0 : tick - this._lastTick;
         this._lastTick = tick;
 
         this.PreUpdate(delta);
@@ -33,7 +32,7 @@ export abstract class BaseSkillTreeRenderer implements ISkillTreeRenderer {
         }
         this.PostUpdate(delta);
 
-        requestAnimationFrame(() => { this.Tick() });
+        requestAnimationFrame(this.Tick);
     }
 
     abstract Initialize(): Promise<boolean>;

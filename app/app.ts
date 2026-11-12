@@ -748,6 +748,10 @@ export class App {
             search += `c=${compare}`;
         }
 
+        if (new URLSearchParams(window.location.search).get("profile") === "1") {
+            search += search.endsWith('?') ? "profile=1" : "&profile=1";
+        }
+
         if (window.location.hash !== hash) {
             window.location.hash = hash;
         }

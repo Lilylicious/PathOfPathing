@@ -23,7 +23,6 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@pixi-essentials/cull": "^2.0.0",
     "http-server": "^14.1.1",
     "mnemonist": "^0.39.5",
     "pixi-viewport": "^5.0.2",
