@@ -124,11 +124,12 @@ export class SkillTreeData implements ISkillTreeData {
 
                     if ((startGroup.x > -centerThreshold && startGroup.x < centerThreshold) && (startGroup.y > -centerThreshold && startGroup.y < centerThreshold)) {
                         // Scion
+                        // 3.28+ hangs extra ascendancies (Reliquarian, Luminary) off the Scion start too; spread them below the Ascendant slot instead of stacking them on it
                         baseX = this.min_x * .65;
-                        baseY = this.max_y * .95;
+                        baseY = this.max_y * .95 + (offset + 1) * offsetDistance;
                         if (this.patch.compare(versions.v3_22_0) >= 0) {
                             baseX = this.min_x * .85;
-                            baseY = this.max_y * .85;
+                            baseY = this.max_y * .85 + (offset + 1) * offsetDistance;
                         }
                     } else if (startGroup.x > -centerThreshold && startGroup.x < centerThreshold) {
                         // Witch, Duelist
