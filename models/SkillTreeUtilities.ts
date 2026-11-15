@@ -103,7 +103,7 @@ export class SkillTreeUtilities {
             const def = this.skillTreeCodec.decodeURL(data, this.skillTreeData, true);
             this.skillTreeData.version = def.Version;
             this.changeStartClass(def.Class, false);
-            this.changeAscendancyClass(def.Ascendancy - 1, false);
+            this.changeAscendancyClass(def.Ascendancy, false);
             const nodesToDisable = Object.values(this.skillTreeData.getNodes(SkillNodeStates.Desired))
             for (const node of nodesToDisable) {
                 this.skillTreeData.removeState(node, SkillNodeStates.Desired);
