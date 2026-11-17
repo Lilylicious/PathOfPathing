@@ -528,7 +528,7 @@ export class SkillTreeData implements ISkillTreeData {
         this.nodesInState[state] = new Array<string>();
     }
 
-    public hasSprite = (sheet: SpriteSheetKey, icon: string): boolean => {
+    public hasSprite = (sheet: string, icon: string): boolean => {
         return this.sprites[sheet] &&
             ((this.sprites[sheet][this.scale.toString()] && this.sprites[sheet][this.scale.toString()].coords[icon] !== undefined)
             || (this.sprites[sheet]["1"] && this.sprites[sheet]["1"].coords[icon] !== undefined))

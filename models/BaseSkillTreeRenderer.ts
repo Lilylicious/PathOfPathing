@@ -154,17 +154,31 @@ export abstract class BaseSkillTreeRenderer implements ISkillTreeRenderer {
             }
             const group = node.nodeGroup;
             const ascendancyName = node.ascendancyName;
-            const className = `Classes${node.ascendancyName}`
-            this.DrawAscendancyBackground(this.skillTreeData.classes.flatMap(x => x.ascendancies), group, ascendancyName, "ascendancyBackground", className);
-            this.DrawAscendancyBackground(this.skillTreeData.alternate_ascendancies, group, ascendancyName, "azmeriBackground", className);
+            const icon = `Classes${ascendancyName}`;
+            // 3.27 moved the wheel artwork from dedicated sheets into the UI sheets.
+            const key = this.FindAscendancyBackgroundKey(icon);
+            if (key === undefined) {
+                continue;
+            }
+
+            const ascendancies = this.skillTreeData.isWildwoodAscendancyClass(node)
+                ? this.skillTreeData.alternate_ascendancies
+                : this.skillTreeData.classes.flatMap(x => x.ascendancies);
+            this.DrawAscendancyBackground(ascendancies, group, ascendancyName, key, icon);
         }
     }
 
-    private DrawAscendancyBackground = (ascendancies: IAscendancyClassV7[], group: IGroup, ascendancyName: string, key: SpriteSheetKey, icon: string) => {
-        if (!this.skillTreeData.hasSprite(key, icon)) {
-            return;
+    // Classes* wheel artwork lives in exactly one sheet per version (UI sheets since 3.27).
+    private FindAscendancyBackgroundKey = (icon: string): string | undefined => {
+        for (const key in this.skillTreeData.sprites) {
+            if (this.skillTreeData.hasSprite(key, icon)) {
+                return key;
+            }
         }
+        return undefined;
+    }
 
+    private DrawAscendancyBackground = (ascendancies: IAscendancyClassV7[], group: IGroup, ascendancyName: string, key: string, icon: string) => {
         const asset: ISpriteSheetAsset = {
             patch: this.skillTreeData.patch,
             key: key,
@@ -467,9 +481,13 @@ export abstract class BaseSkillTreeRenderer implements ISkillTreeRenderer {
         this.DrawSpriteSheetAssets(layer + 3, frames);
     }
 
-    private GetFrameSpriteSheetKey = (node: SkillNode, frame: string | null): SpriteSheetKey => {
+    private GetFrameSpriteSheetKey = (node: SkillNode, frame: string | null): string => {
         if (this.skillTreeData.isWildwoodAscendancyClass(node)) {
-            return 'azmeri';
+            // 3.27+ split the wildwood frame art out of the shared azmeri sheet into each bloodline's own sheet
+            if (this.skillTreeData.sprites['azmeri'] !== undefined) {
+                return 'azmeri';
+            }
+            return this.FindAscendancyBackgroundKey(`Classes${node.ascendancyName}`) ?? 'ascendancy';
         }
 
         if (frame?.startsWith('Ascendancy')) {
@@ -697,7 +715,7 @@ export enum HighlightColor {
 
 export interface ISpriteSheetAsset {
     patch: SemVer;
-    key: SpriteSheetKey;
+    key: string;
     icon: string;
     x?: number | undefined;
     y?: number | undefined;
